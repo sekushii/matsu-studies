@@ -1,8 +1,8 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
@@ -26,10 +26,10 @@ interface Question {
   id: string;
   type: QuestionType;
   question: string;
-  questionImage?: string | null;
+  questionImage?: string;
   options: Array<{
     text: string;
-    image?: string | null;
+    image?: string;
   }>;
   correctAnswer?: string;
   correctAnswers?: string[];
@@ -40,26 +40,106 @@ interface Exam {
   title: string;
   description: string;
   timeLimit: number;
-  icon?: string; // Base64 image data
+  icon?: string;
   folderId?: string;
   questions: Question[];
 }
 
-export default function CreateExamPage() {
+export default function EditExamPage() {
+  const params = useParams();
   const router = useRouter();
-  const [examTitle, setExamTitle] = useState("");
-  const [examDescription, setExamDescription] = useState("");
-  const [timeLimit, setTimeLimit] = useState("30");
-  const [selectedIcon, setSelectedIcon] = useState<string>("");
-  const [questions, setQuestions] = useState<Question[]>([
-    {
-      id: "q1",
+  const examId = params.id as string;
+
+  const [exam, setExam] = useState<Exam>({
+    id: "",
+    title: "",
+    description: "",
+    timeLimit: 60,
+    questions: [],
+  });
+
+  useEffect(() => {
+    // Load exam from localStorage
+    const savedExams = localStorage.getItem("exams");
+    if (savedExams) {
+      const exams = JSON.parse(savedExams) as Exam[];
+      const exam = exams.find((e) => e.id === examId);
+      if (exam) {
+        setExam({ ...exam });
+      }
+    }
+  }, [examId]);
+
+  const addQuestion = () => {
+    const newQuestion: Question = {
+      id: crypto.randomUUID(),
       type: "multiple-choice",
       question: "",
       options: [{ text: "", image: undefined }],
       correctAnswer: "",
-    },
-  ]);
+    };
+    setExam((prev) => ({
+      ...prev,
+      questions: [...prev.questions, newQuestion],
+    }));
+  };
+
+  const addOption = (questionIndex: number) => {
+    const newQuestions = [...exam.questions];
+    const question = newQuestions[questionIndex];
+    if (!question) return;
+
+    newQuestions[questionIndex] = {
+      ...question,
+      options: [...question.options, { text: "", image: undefined }],
+    };
+    setExam((prev) => ({ ...prev, questions: newQuestions }));
+  };
+
+  const removeQuestion = (index: number) => {
+    if (exam.questions.length > 1) {
+      const newQuestions = [...exam.questions];
+      newQuestions.splice(index, 1);
+      setExam((prev) => ({ ...prev, questions: newQuestions }));
+    }
+  };
+
+  const updateQuestion = (
+    questionIndex: number,
+    field: keyof Question,
+    value: Question[keyof Question],
+  ) => {
+    const newQuestions = [...exam.questions];
+    const question = newQuestions[questionIndex];
+    if (!question) return;
+
+    newQuestions[questionIndex] = {
+      ...question,
+      [field]: value,
+    };
+    setExam((prev) => ({ ...prev, questions: newQuestions }));
+  };
+
+  const updateOption = (
+    questionIndex: number,
+    optionIndex: number,
+    value: string,
+  ) => {
+    const newQuestions = [...exam.questions];
+    const question = newQuestions[questionIndex];
+    if (!question) return;
+
+    const newOptions = [...question.options];
+    newOptions[optionIndex] = {
+      ...newOptions[optionIndex],
+      text: value,
+    };
+    newQuestions[questionIndex] = {
+      ...question,
+      options: newOptions,
+    };
+    setExam((prev) => ({ ...prev, questions: newQuestions }));
+  };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -79,102 +159,9 @@ export default function CreateExamPage() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setSelectedIcon(reader.result as string);
+      setExam((prev) => ({ ...prev, icon: reader.result as string }));
     };
     reader.readAsDataURL(file);
-  };
-
-  const addQuestion = () => {
-    const newQuestion: Question = {
-      id: crypto.randomUUID(),
-      type: "multiple-choice",
-      question: "",
-      options: [{ text: "", image: undefined }],
-    };
-    setQuestions([...questions, newQuestion]);
-  };
-
-  const updateQuestion = (
-    index: number,
-    field: keyof Question,
-    value: Question[keyof Question],
-  ) => {
-    const newQuestions = [...questions];
-    const currentQuestion = newQuestions[index];
-    if (!currentQuestion) return;
-
-    if (field === "type") {
-      const type = value as QuestionType;
-      // Reset options based on question type
-      if (type === "multiple-choice") {
-        newQuestions[index] = {
-          id: currentQuestion.id,
-          type,
-          question: currentQuestion.question,
-          options: [{ text: "", image: undefined }],
-          correctAnswer: "",
-          correctAnswers: undefined,
-        };
-      } else if (type === "checkbox") {
-        newQuestions[index] = {
-          id: currentQuestion.id,
-          type,
-          question: currentQuestion.question,
-          options: [{ text: "", image: undefined }],
-          correctAnswers: [],
-          correctAnswer: undefined,
-        };
-      } else if (type === "text") {
-        newQuestions[index] = {
-          id: currentQuestion.id,
-          type,
-          question: currentQuestion.question,
-          options: [],
-          correctAnswer: "",
-          correctAnswers: undefined,
-        };
-      }
-    } else {
-      newQuestions[index] = {
-        ...currentQuestion,
-        [field]: value,
-      };
-    }
-
-    setQuestions(newQuestions);
-  };
-
-  const addOption = (questionIndex: number) => {
-    const newQuestions = [...questions];
-    const question = newQuestions[questionIndex];
-    if (!question) return;
-
-    newQuestions[questionIndex] = {
-      ...question,
-      options: [...question.options, { text: "", image: undefined }],
-    };
-    setQuestions(newQuestions);
-  };
-
-  const updateOption = (
-    questionIndex: number,
-    optionIndex: number,
-    value: string,
-  ) => {
-    const newQuestions = [...questions];
-    const question = newQuestions[questionIndex];
-    if (!question) return;
-
-    const newOptions = [...question.options];
-    newOptions[optionIndex] = {
-      ...newOptions[optionIndex],
-      text: value,
-    };
-    newQuestions[questionIndex] = {
-      ...question,
-      options: newOptions,
-    };
-    setQuestions(newQuestions);
   };
 
   const handleQuestionImageUpload = (
@@ -196,13 +183,14 @@ export default function CreateExamPage() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setQuestions((prev) =>
-        prev.map((q) =>
+      setExam((prev) => ({
+        ...prev,
+        questions: prev.questions.map((q) =>
           q.id === questionId
             ? { ...q, questionImage: reader.result as string }
             : q,
         ),
-      );
+      }));
     };
     reader.readAsDataURL(file);
   };
@@ -227,8 +215,9 @@ export default function CreateExamPage() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setQuestions((prev) =>
-        prev.map((q) =>
+      setExam((prev) => ({
+        ...prev,
+        questions: prev.questions.map((q) =>
           q.id === questionId
             ? {
                 ...q,
@@ -240,37 +229,58 @@ export default function CreateExamPage() {
               }
             : q,
         ),
-      );
+      }));
     };
     reader.readAsDataURL(file);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const exam: Exam = {
-      id: crypto.randomUUID(),
-      title: examTitle,
-      description: examDescription,
-      timeLimit: Number.parseInt(timeLimit),
-      icon: selectedIcon,
-      questions,
+    const updatedExam: Exam = {
+      id: exam.id,
+      title: exam.title,
+      description: exam.description,
+      timeLimit: Number.parseInt(exam.timeLimit.toString()),
+      icon: exam.icon,
+      questions: exam.questions,
     };
 
-    // Save exam to localStorage
-    const savedExams = localStorage.getItem("exams");
-    const exams: Exam[] = savedExams ? (JSON.parse(savedExams) as Exam[]) : [];
-    exams.push(exam);
-    localStorage.setItem("exams", JSON.stringify(exams));
-
-    alert("Exam created successfully!");
-    router.push("/");
+    try {
+      const savedExams = localStorage.getItem("exams");
+      if (savedExams) {
+        const exams = JSON.parse(savedExams) as Exam[];
+        const updatedExams = exams.map((e) =>
+          e.id === exam.id ? updatedExam : e,
+        );
+        localStorage.setItem("exams", JSON.stringify(updatedExams));
+      }
+      router.push("/");
+    } catch (error) {
+      if (error instanceof Error && error.name === "QuotaExceededError") {
+        // Clear old exams to make space
+        const oldExams = localStorage.getItem("exams");
+        if (oldExams) {
+          const exams = JSON.parse(oldExams) as Exam[];
+          // Keep only the 5 most recent exams
+          const recentExams = exams.slice(-5);
+          localStorage.setItem(
+            "exams",
+            JSON.stringify([...recentExams, updatedExam]),
+          );
+        }
+        router.push("/");
+      } else {
+        console.error("Error saving exam:", error);
+        alert("Failed to save exam. Please try again.");
+      }
+    }
   };
 
   return (
     <div className="container py-10">
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-3xl font-bold tracking-tight">Create New Exam</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Edit Exam</h1>
         <Link href="/">
           <Button variant="outline">
             <Home className="mr-2 h-4 w-4" />
@@ -288,10 +298,10 @@ export default function CreateExamPage() {
             <div className="grid gap-2">
               <Label htmlFor="icon">Exam Icon</Label>
               <div className="flex items-center gap-4">
-                {selectedIcon && (
+                {exam.icon && (
                   <div className="relative h-20 w-20 overflow-hidden rounded-md border">
                     <Image
-                      src={selectedIcon}
+                      src={exam.icon}
                       alt="Exam icon"
                       fill
                       className="object-cover"
@@ -301,7 +311,9 @@ export default function CreateExamPage() {
                       variant="destructive"
                       size="icon"
                       className="absolute right-1 top-1 h-6 w-6"
-                      onClick={() => setSelectedIcon("")}
+                      onClick={() =>
+                        setExam((prev) => ({ ...prev, icon: undefined }))
+                      }
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -330,8 +342,8 @@ export default function CreateExamPage() {
               <Label htmlFor="title">Exam Title</Label>
               <Input
                 id="title"
-                value={examTitle}
-                onChange={(e) => setExamTitle(e.target.value)}
+                value={exam.title || ""}
+                onChange={(e) => setExam({ ...exam, title: e.target.value })}
                 placeholder="Enter exam title"
                 required
               />
@@ -341,8 +353,10 @@ export default function CreateExamPage() {
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                value={examDescription}
-                onChange={(e) => setExamDescription(e.target.value)}
+                value={exam.description || ""}
+                onChange={(e) =>
+                  setExam({ ...exam, description: e.target.value })
+                }
                 placeholder="Enter exam description"
               />
             </div>
@@ -352,8 +366,13 @@ export default function CreateExamPage() {
               <Input
                 id="timeLimit"
                 type="number"
-                value={timeLimit}
-                onChange={(e) => setTimeLimit(e.target.value)}
+                value={exam.timeLimit.toString()}
+                onChange={(e) =>
+                  setExam({
+                    ...exam,
+                    timeLimit: Number.parseInt(e.target.value),
+                  })
+                }
                 min="1"
                 required
               />
@@ -363,18 +382,48 @@ export default function CreateExamPage() {
 
         <h2 className="mb-4 text-xl font-bold">Questions</h2>
 
-        {questions.map((question, index) => (
+        {exam.questions.map((question, questionIndex) => (
           <Card key={question.id} className="mb-4">
-            <CardHeader>
-              <CardTitle>Question {index + 1}</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Question {questionIndex + 1}</CardTitle>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => removeQuestion(questionIndex)}
+                disabled={exam.questions.length === 1}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
+                <Label>Question Type</Label>
+                <Select
+                  value={question.type}
+                  onValueChange={(value) =>
+                    updateQuestion(questionIndex, "type", value as QuestionType)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select question type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="multiple-choice">
+                      Multiple Choice
+                    </SelectItem>
+                    <SelectItem value="checkbox">Checkbox</SelectItem>
+                    <SelectItem value="text">Text</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
                 <Label>Question Text</Label>
                 <Textarea
-                  value={question.question}
+                  value={question.question || ""}
                   onChange={(e) =>
-                    updateQuestion(index, "question", e.target.value)
+                    updateQuestion(questionIndex, "question", e.target.value)
                   }
                   placeholder="Enter your question"
                 />
@@ -392,30 +441,32 @@ export default function CreateExamPage() {
                         size="icon"
                         className="absolute right-2 top-2"
                         onClick={() =>
-                          updateQuestion(index, "questionImage", null)
+                          updateQuestion(
+                            questionIndex,
+                            "questionImage",
+                            undefined,
+                          )
                         }
                       >
                         <X className="h-4 w-4" />
                       </Button>
                     </>
                   ) : (
-                    <div className="flex h-full items-center justify-center">
-                      <Label
-                        htmlFor={`question-image-${question.id}`}
-                        className="flex h-full w-full cursor-pointer items-center justify-center"
-                      >
-                        <Upload className="h-8 w-8 text-muted-foreground" />
-                        <input
-                          id={`question-image-${question.id}`}
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={(e) =>
-                            handleQuestionImageUpload(question.id, e)
-                          }
-                        />
-                      </Label>
-                    </div>
+                    <Label
+                      htmlFor={`question-image-${question.id}`}
+                      className="flex h-full w-full cursor-pointer items-center justify-center"
+                    >
+                      <Upload className="h-8 w-8 text-muted-foreground" />
+                      <input
+                        id={`question-image-${question.id}`}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) =>
+                          handleQuestionImageUpload(question.id, e)
+                        }
+                      />
+                    </Label>
                   )}
                 </div>
               </div>
@@ -423,12 +474,19 @@ export default function CreateExamPage() {
               <div className="space-y-2">
                 <Label>Options</Label>
                 {question.options.map((option, optionIndex) => (
-                  <div key={optionIndex} className="space-y-2">
+                  <div
+                    key={`${question.id}-option-${optionIndex}`}
+                    className="space-y-2"
+                  >
                     <div className="flex gap-2">
                       <Input
-                        value={option.text}
+                        value={option.text || ""}
                         onChange={(e) =>
-                          updateOption(index, optionIndex, e.target.value)
+                          updateOption(
+                            questionIndex,
+                            optionIndex,
+                            e.target.value,
+                          )
                         }
                         placeholder={`Option ${optionIndex + 1}`}
                       />
@@ -446,8 +504,9 @@ export default function CreateExamPage() {
                               size="icon"
                               className="absolute right-1 top-1"
                               onClick={() =>
-                                setQuestions((prev) =>
-                                  prev.map((q) =>
+                                setExam((prev) => ({
+                                  ...prev,
+                                  questions: prev.questions.map((q) =>
                                     q.id === question.id
                                       ? {
                                           ...q,
@@ -459,7 +518,7 @@ export default function CreateExamPage() {
                                         }
                                       : q,
                                   ),
-                                )
+                                }))
                               }
                             >
                               <X className="h-3 w-3" />
@@ -492,8 +551,9 @@ export default function CreateExamPage() {
                           variant="destructive"
                           size="icon"
                           onClick={() => {
-                            setQuestions((prev) =>
-                              prev.map((q) =>
+                            setExam((prev) => ({
+                              ...prev,
+                              questions: prev.questions.map((q) =>
                                 q.id === question.id
                                   ? {
                                       ...q,
@@ -503,7 +563,7 @@ export default function CreateExamPage() {
                                     }
                                   : q,
                               ),
-                            );
+                            }));
                           }}
                         >
                           <Trash2 className="h-4 w-4" />
@@ -515,32 +575,11 @@ export default function CreateExamPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => addOption(index)}
+                  onClick={() => addOption(questionIndex)}
                   className="mt-2"
                 >
                   Add Option
                 </Button>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Question Type</Label>
-                <Select
-                  value={question.type}
-                  onValueChange={(value) =>
-                    updateQuestion(index, "type", value as QuestionType)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select question type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="multiple-choice">
-                      Multiple Choice
-                    </SelectItem>
-                    <SelectItem value="checkbox">Checkbox</SelectItem>
-                    <SelectItem value="text">Text</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               {question.type === "multiple-choice" && (
@@ -549,7 +588,7 @@ export default function CreateExamPage() {
                   <Select
                     value={question.correctAnswer}
                     onValueChange={(value) =>
-                      updateQuestion(index, "correctAnswer", value)
+                      updateQuestion(questionIndex, "correctAnswer", value)
                     }
                   >
                     <SelectTrigger>
@@ -589,7 +628,11 @@ export default function CreateExamPage() {
                             const newAnswers = checked
                               ? [...currentAnswers, option.text]
                               : currentAnswers.filter((a) => a !== option.text);
-                            updateQuestion(index, "correctAnswers", newAnswers);
+                            updateQuestion(
+                              questionIndex,
+                              "correctAnswers",
+                              newAnswers,
+                            );
                           }}
                         />
                         <Label
@@ -609,7 +652,11 @@ export default function CreateExamPage() {
                   <Input
                     value={question.correctAnswer ?? ""}
                     onChange={(e) =>
-                      updateQuestion(index, "correctAnswer", e.target.value)
+                      updateQuestion(
+                        questionIndex,
+                        "correctAnswer",
+                        e.target.value,
+                      )
                     }
                     placeholder="Enter correct answer"
                   />
@@ -627,7 +674,7 @@ export default function CreateExamPage() {
 
           <Button type="submit">
             <Save className="mr-2 h-4 w-4" />
-            Save Exam
+            Save Changes
           </Button>
         </div>
       </form>
