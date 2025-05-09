@@ -24,8 +24,18 @@ import {
   CheckCircle2,
   Play,
   Eye,
+  Filter,
+  HelpCircle,
 } from "lucide-react";
 import Image from "next/image";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "~/components/ui/select";
+import { Label } from "~/components/ui/label";
 
 interface Exam {
   id: string;
@@ -43,6 +53,8 @@ interface Exam {
     correctAnswers?: string[];
   }>;
   completed: boolean;
+  subject?: string;
+  topics?: string[];
 }
 
 interface Folder {
@@ -57,22 +69,65 @@ export default function ExamListPage() {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [draggedExamId, setDraggedExamId] = useState<string | null>(null);
   const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
+  const [selectedSubject, setSelectedSubject] = useState<string>("all");
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
+  const [availableTopics, setAvailableTopics] = useState<string[]>([]);
 
   useEffect(() => {
     // Load exams and folders from localStorage
     const savedExams = localStorage.getItem("exams");
     const savedFolders = localStorage.getItem("folders");
+    const savedSubjects = localStorage.getItem("exam-subjects");
 
     if (savedExams) {
       const parsedExams = JSON.parse(savedExams) as Exam[];
       setExams(parsedExams);
+
+      // Extract unique topics from all exams
+      const topics = new Set<string>();
+      parsedExams.forEach((exam) => {
+        exam.topics?.forEach((topic) => topics.add(topic));
+      });
+      setAvailableTopics(Array.from(topics));
     }
 
     if (savedFolders) {
       const parsedFolders = JSON.parse(savedFolders) as Folder[];
       setFolders(parsedFolders);
     }
+
+    if (savedSubjects) {
+      setAvailableSubjects(JSON.parse(savedSubjects) as string[]);
+    }
   }, []);
+
+  const filteredExams = exams.filter((exam) => {
+    const matchesSubject =
+      selectedSubject === "all" || exam.subject === selectedSubject;
+    const matchesTopics =
+      selectedTopics.length === 0 ||
+      selectedTopics.every((topic) => exam.topics?.includes(topic));
+    return matchesSubject && matchesTopics;
+  });
+
+  const deleteExam = (examId: string) => {
+    // Remove exam from exams array
+    const updatedExams = exams.filter((exam) => exam.id !== examId);
+    setExams(updatedExams);
+    localStorage.setItem("exams", JSON.stringify(updatedExams));
+
+    // Remove exam answers from localStorage
+    localStorage.removeItem(`exam-answers-${examId}`);
+  };
+
+  const removeExamFromFolder = (examId: string) => {
+    const updatedExams = exams.map((exam) =>
+      exam.id === examId ? { ...exam, folderId: undefined } : exam,
+    );
+    setExams(updatedExams);
+    localStorage.setItem("exams", JSON.stringify(updatedExams));
+  };
 
   const handleDragStart = (examId: string) => {
     setDraggedExamId(examId);
@@ -151,14 +206,6 @@ export default function ExamListPage() {
     reader.readAsDataURL(file);
   };
 
-  const removeExamFromFolder = (examId: string) => {
-    const updatedExams = exams.map((exam) =>
-      exam.id === examId ? { ...exam, folderId: undefined } : exam,
-    );
-    setExams(updatedExams);
-    localStorage.setItem("exams", JSON.stringify(updatedExams));
-  };
-
   return (
     <div className="container mx-auto py-10">
       <div className="mb-8 flex items-center justify-between">
@@ -173,6 +220,18 @@ export default function ExamListPage() {
             <FolderPlus className="mr-2 h-4 w-4" />
             New Folder
           </Button>
+          <Link href="/questions">
+            <Button variant="outline">
+              <HelpCircle className="mr-2 h-4 w-4" />
+              Questions
+            </Button>
+          </Link>
+          <Link href="/summary">
+            <Button variant="outline">
+              <FileText className="mr-2 h-4 w-4" />
+              Summary
+            </Button>
+          </Link>
           <Link href="/exams/create">
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -186,7 +245,7 @@ export default function ExamListPage() {
         {/* Exams Section */}
         <div className="flex-1">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {exams
+            {filteredExams
               .filter((exam) => !exam.folderId)
               .map((exam) => (
                 <Card
@@ -244,7 +303,7 @@ export default function ExamListPage() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => removeExamFromFolder(exam.id)}
+                          onClick={() => deleteExam(exam.id)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -270,6 +329,89 @@ export default function ExamListPage() {
 
         {/* Folders Section */}
         <div className="w-64 space-y-4">
+          <Card className="mb-4">
+            <CardHeader className="py-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Filter className="h-4 w-4" />
+                Filters
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 py-2">
+              <div className="space-y-2">
+                <Label className="text-sm">Subject</Label>
+                <Select
+                  value={selectedSubject}
+                  onValueChange={setSelectedSubject}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="All subjects" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All subjects</SelectItem>
+                    {availableSubjects.map((subject) => (
+                      <SelectItem key={subject} value={subject}>
+                        {subject}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm">Topics</Label>
+                <Select
+                  value="none"
+                  onValueChange={(value) => {
+                    if (value !== "none" && !selectedTopics.includes(value)) {
+                      setSelectedTopics([...selectedTopics, value]);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-8">
+                    <SelectValue placeholder="Select topics" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none" disabled>
+                      Select a topic
+                    </SelectItem>
+                    {availableTopics
+                      .filter((topic) => !selectedTopics.includes(topic))
+                      .map((topic) => (
+                        <SelectItem key={topic} value={topic}>
+                          {topic}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                {selectedTopics.length > 0 && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {selectedTopics.map((topic) => (
+                      <div
+                        key={topic}
+                        className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-xs"
+                      >
+                        <span>{topic}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-3 w-3 p-0"
+                          onClick={() =>
+                            setSelectedTopics(
+                              selectedTopics.filter((t) => t !== topic),
+                            )
+                          }
+                        >
+                          <X className="h-2 w-2" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           <h2 className="text-xl font-semibold">Folders</h2>
           <div className="space-y-4">
             {folders.map((folder) => (
@@ -366,14 +508,24 @@ export default function ExamListPage() {
                             </CardDescription>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => removeExamFromFolder(exam.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => removeExamFromFolder(exam.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => deleteExam(exam.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent className="text-sm">

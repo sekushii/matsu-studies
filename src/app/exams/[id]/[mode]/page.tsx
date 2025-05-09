@@ -8,9 +8,11 @@ import { Checkbox } from "~/components/ui/checkbox";
 import { Label } from "~/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "~/components/ui/radio-group";
 import { Textarea } from "~/components/ui/textarea";
-import { ArrowLeft, ArrowRight, Clock, Home } from "lucide-react";
+import { ArrowLeft, ArrowRight, Clock, Home, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { Input } from "~/components/ui/input";
+import { SelectItem } from "~/components/ui/select";
 
 type QuestionType = "multiple-choice" | "checkbox" | "text";
 
@@ -27,6 +29,8 @@ interface Question {
   correctAnswers?: string[];
   completed?: boolean;
   incorrectAnswers: string[];
+  notes?: string;
+  tips?: string[];
 }
 
 interface Exam {
@@ -38,6 +42,50 @@ interface Exam {
   folderId?: string;
   questions: Question[];
   completed?: boolean;
+}
+
+interface QuestionStats {
+  questionId: string;
+  timeSpent: number;
+  isCorrect: boolean;
+  attempts: number;
+  lastAttempted: string;
+}
+
+interface ExamAttempt {
+  id: string;
+  examId: string;
+  startTime: string;
+  endTime: string;
+  totalTime: number;
+  questionStats: QuestionStats[];
+  score: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
+}
+
+interface ExamHistory {
+  examId: string;
+  attempts: ExamAttempt[];
+  averageScore: number;
+  bestScore: number;
+  totalAttempts: number;
+  averageTimePerQuestion: number;
+  lastAttempted: string;
+}
+
+interface ExamSummary {
+  id: string;
+  examId: string;
+  examTitle: string;
+  date: string;
+  score: number;
+  totalQuestions: number;
+  timeSpent: number;
+  timeLimit: number;
+  correctAnswers: number;
+  incorrectAnswers: number;
 }
 
 export default function ExamPage() {
@@ -59,12 +107,21 @@ export default function ExamPage() {
   const [selectedAnswers, setSelectedAnswers] = useState<
     Record<string, string | string[]>
   >({});
+  const [showTips, setShowTips] = useState(false);
+  const [newTip, setNewTip] = useState("");
+  const [questionStartTimes, setQuestionStartTimes] = useState<
+    Record<string, number>
+  >({});
+  const [examStartTime, setExamStartTime] = useState<number>(0);
+  const [examHistory, setExamHistory] = useState<ExamHistory | null>(null);
 
   const handleSubmit = useCallback(() => {
     if (mode === "take") {
+      const questionStats = calculateQuestionStats();
+      updateExamHistory(questionStats);
       setIsSubmitted(true);
     }
-  }, [mode]);
+  }, [mode, exam, questionStartTimes, examStartTime, examHistory]);
 
   useEffect(() => {
     // Load exam from localStorage
@@ -76,6 +133,13 @@ export default function ExamPage() {
         setExam(foundExam);
         if (mode === "take") {
           setTimeLeft(foundExam.timeLimit * 60);
+          setExamStartTime(Date.now());
+          // Initialize question start times
+          const startTimes: Record<string, number> = {};
+          foundExam.questions.forEach((q) => {
+            startTimes[q.id] = Date.now();
+          });
+          setQuestionStartTimes(startTimes);
         }
         // Load completed questions
         const completed = new Set(
@@ -99,6 +163,17 @@ export default function ExamPage() {
             setSelectedAnswers(parsedAnswers);
           } catch (error) {
             console.error("Error parsing saved answers:", error);
+          }
+        }
+
+        // Load exam history
+        const savedHistory = localStorage.getItem(`exam-history-${examId}`);
+        if (savedHistory) {
+          try {
+            const parsedHistory = JSON.parse(savedHistory) as ExamHistory;
+            setExamHistory(parsedHistory);
+          } catch (error) {
+            console.error("Error parsing exam history:", error);
           }
         }
       }
@@ -242,6 +317,104 @@ export default function ExamPage() {
     }
   };
 
+  // Update question start time when changing questions
+  useEffect(() => {
+    if (!exam || mode !== "take") return;
+    const currentQuestionId = exam.questions[currentQuestionIndex]?.id;
+    if (currentQuestionId) {
+      setQuestionStartTimes((prev) => ({
+        ...prev,
+        [currentQuestionId]: Date.now(),
+      }));
+    }
+  }, [currentQuestionIndex, exam, mode]);
+
+  const calculateQuestionStats = (): QuestionStats[] => {
+    if (!exam) return [];
+
+    return exam.questions.map((question) => {
+      const startTime = questionStartTimes[question.id];
+      const timeSpent = startTime ? (Date.now() - startTime) / 1000 : 0;
+      const isCorrect = isAnswerCorrect(question.id);
+
+      return {
+        questionId: question.id,
+        timeSpent,
+        isCorrect,
+        attempts: 1, // This will be updated from history if available
+        lastAttempted: new Date().toISOString(),
+      };
+    });
+  };
+
+  const updateExamHistory = (questionStats: QuestionStats[]) => {
+    if (!exam || !questionStats.length) return;
+
+    const correctAnswers = questionStats.filter(
+      (stat) => stat.isCorrect,
+    ).length;
+    const totalQuestions = exam.questions.length;
+    const score = (correctAnswers / totalQuestions) * 100;
+    const totalTime = (Date.now() - examStartTime) / 1000;
+
+    const newAttempt: ExamAttempt = {
+      id: crypto.randomUUID(),
+      examId: exam.id,
+      startTime: new Date(examStartTime).toISOString(),
+      endTime: new Date().toISOString(),
+      totalTime,
+      questionStats,
+      score,
+      totalQuestions,
+      correctAnswers,
+      incorrectAnswers: totalQuestions - correctAnswers,
+    };
+
+    const updatedHistory: ExamHistory = {
+      examId: exam.id,
+      attempts: [...(examHistory?.attempts ?? []), newAttempt],
+      averageScore: examHistory
+        ? (examHistory.averageScore * examHistory.totalAttempts + score) /
+          (examHistory.totalAttempts + 1)
+        : score,
+      bestScore: examHistory ? Math.max(examHistory.bestScore, score) : score,
+      totalAttempts: (examHistory?.totalAttempts ?? 0) + 1,
+      averageTimePerQuestion: examHistory
+        ? (examHistory.averageTimePerQuestion * examHistory.totalAttempts +
+            totalTime / totalQuestions) /
+          (examHistory.totalAttempts + 1)
+        : totalTime / totalQuestions,
+      lastAttempted: new Date().toISOString(),
+    };
+
+    setExamHistory(updatedHistory);
+    localStorage.setItem(
+      `exam-history-${examId}`,
+      JSON.stringify(updatedHistory),
+    );
+
+    // Save summary for the summary page
+    const examSummary: ExamSummary = {
+      id: newAttempt.id,
+      examId: exam.id,
+      examTitle: exam.title,
+      date: new Date().toLocaleDateString(),
+      score,
+      totalQuestions,
+      timeSpent: Math.round(totalTime / 60), // Convert to minutes
+      timeLimit: exam.timeLimit,
+      correctAnswers,
+      incorrectAnswers: totalQuestions - correctAnswers,
+    };
+
+    const savedSummaries = localStorage.getItem("examSummaries");
+    const summaries: ExamSummary[] = savedSummaries
+      ? (JSON.parse(savedSummaries) as ExamSummary[])
+      : [];
+    summaries.push(examSummary);
+    localStorage.setItem("examSummaries", JSON.stringify(summaries));
+  };
+
   if (!exam) {
     return (
       <div className="container mx-auto max-w-7xl px-4 py-10">
@@ -339,6 +512,135 @@ export default function ExamPage() {
         </div>
       )}
 
+      {mode === "take" && isSubmitted && examHistory && (
+        <Card className="mb-8">
+          <CardHeader>
+            <CardTitle>Exam Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="rounded-lg border p-4">
+                <div className="text-sm font-medium text-muted-foreground">
+                  Score
+                </div>
+                <div className="text-2xl font-bold">
+                  {examHistory.attempts[
+                    examHistory.attempts.length - 1
+                  ]?.score.toFixed(1)}
+                  %
+                </div>
+              </div>
+              <div className="rounded-lg border p-4">
+                <div className="text-sm font-medium text-muted-foreground">
+                  Time Spent
+                </div>
+                <div className="text-2xl font-bold">
+                  {formatTime(
+                    examHistory.attempts[examHistory.attempts.length - 1]
+                      ?.totalTime ?? 0,
+                  )}
+                </div>
+              </div>
+              <div className="rounded-lg border p-4">
+                <div className="text-sm font-medium text-muted-foreground">
+                  Correct Answers
+                </div>
+                <div className="text-2xl font-bold">
+                  {examHistory.attempts[examHistory.attempts.length - 1]
+                    ?.correctAnswers ?? 0}{" "}
+                  /{" "}
+                  {examHistory.attempts[examHistory.attempts.length - 1]
+                    ?.totalQuestions ?? 0}
+                </div>
+              </div>
+              <div className="rounded-lg border p-4">
+                <div className="text-sm font-medium text-muted-foreground">
+                  Average Time per Question
+                </div>
+                <div className="text-2xl font-bold">
+                  {formatTime(examHistory.averageTimePerQuestion)}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Question Details</h3>
+              <div className="space-y-2">
+                {examHistory.attempts[
+                  examHistory.attempts.length - 1
+                ]?.questionStats.map((stat, index) => {
+                  const question = exam?.questions.find(
+                    (q) => q.id === stat.questionId,
+                  );
+                  if (!question) return null;
+                  return (
+                    <div
+                      key={stat.questionId}
+                      className="rounded-lg border p-4"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="font-medium">
+                            Question {index + 1}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {question.question}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-sm">
+                            Time: {formatTime(stat.timeSpent)}
+                          </div>
+                          <div
+                            className={`rounded-full px-2 py-1 text-sm ${
+                              stat.isCorrect
+                                ? "bg-green-100 text-green-700"
+                                : "bg-red-100 text-red-700"
+                            }`}
+                          >
+                            {stat.isCorrect ? "Correct" : "Incorrect"}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Exam History</h3>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="rounded-lg border p-4">
+                  <div className="text-sm font-medium text-muted-foreground">
+                    Best Score
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {examHistory.bestScore.toFixed(1)}%
+                  </div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-sm font-medium text-muted-foreground">
+                    Average Score
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {examHistory.averageScore.toFixed(1)}%
+                  </div>
+                </div>
+                <div className="rounded-lg border p-4">
+                  <div className="text-sm font-medium text-muted-foreground">
+                    Total Attempts
+                  </div>
+                  <div className="text-2xl font-bold">
+                    {examHistory.totalAttempts}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {exam?.questions?.[currentQuestionIndex] && (
         <div className="mx-auto max-w-3xl">
           <Card>
@@ -384,6 +686,8 @@ export default function ExamPage() {
                 >
                   {exam.questions[currentQuestionIndex]?.options.map(
                     (option, optionIndex) => {
+                      const optionText =
+                        option.text || `Option ${optionIndex + 1}`;
                       const isCorrect =
                         option.text ===
                         exam.questions[currentQuestionIndex]?.correctAnswer;
@@ -408,7 +712,7 @@ export default function ExamPage() {
                           className={`flex items-center space-x-4 rounded-md p-3 ${backgroundColor}`}
                         >
                           <RadioGroupItem
-                            value={option.text}
+                            value={optionText}
                             id={`${exam.questions[currentQuestionIndex]?.id ?? ""}-option-${optionIndex}`}
                             className={`${
                               showFeedback && isCorrect
@@ -423,7 +727,7 @@ export default function ExamPage() {
                               <div className="relative h-16 w-16 overflow-hidden rounded-md">
                                 <Image
                                   src={option.image}
-                                  alt={option.text}
+                                  alt={optionText}
                                   fill
                                   className="object-cover"
                                 />
@@ -433,7 +737,7 @@ export default function ExamPage() {
                               htmlFor={`${exam.questions[currentQuestionIndex]?.id ?? ""}-option-${optionIndex}`}
                               className="text-base"
                             >
-                              {option.text}
+                              {optionText}
                             </Label>
                           </div>
                         </div>
@@ -447,6 +751,8 @@ export default function ExamPage() {
                 <div className="space-y-2">
                   {exam.questions[currentQuestionIndex]?.options.map(
                     (option, optionIndex) => {
+                      const optionText =
+                        option.text || `Option ${optionIndex + 1}`;
                       const isCorrect = exam.questions[
                         currentQuestionIndex
                       ]?.correctAnswers?.includes(option.text);
@@ -504,7 +810,7 @@ export default function ExamPage() {
                               <div className="relative h-16 w-16 overflow-hidden rounded-md">
                                 <Image
                                   src={option.image}
-                                  alt={option.text}
+                                  alt={optionText}
                                   fill
                                   className="object-cover"
                                 />
@@ -514,7 +820,7 @@ export default function ExamPage() {
                               htmlFor={`${exam.questions[currentQuestionIndex]?.id ?? ""}-option-${optionIndex}`}
                               className="text-base"
                             >
-                              {option.text}
+                              {optionText}
                             </Label>
                           </div>
                         </div>
@@ -628,103 +934,433 @@ export default function ExamPage() {
               </div>
 
               {mode === "review" && (
-                <div className="mt-4 flex justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      const currentQuestionId =
-                        exam.questions[currentQuestionIndex]?.id;
-                      if (!currentQuestionId) return;
+                <div className="mt-4 space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Notes</Label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          const currentQuestionId =
+                            exam.questions[currentQuestionIndex]?.id;
+                          if (!currentQuestionId) return;
 
-                      // Clear answer for current question only
-                      setAnswers((prev) => {
-                        const newAnswers = { ...prev };
-                        delete newAnswers[currentQuestionId];
-                        localStorage.setItem(
-                          `exam-answers-${examId}`,
-                          JSON.stringify(newAnswers),
-                        );
-                        return newAnswers;
-                      });
+                          const updatedQuestions = exam.questions.map((q) => {
+                            if (q.id === currentQuestionId) {
+                              return { ...q, notes: "" };
+                            }
+                            return q;
+                          });
 
-                      // Remove from completed questions
-                      setCompletedQuestions((prev) => {
-                        const newSet = new Set(prev);
-                        newSet.delete(currentQuestionId);
-                        return newSet;
-                      });
+                          setExam((prev) => {
+                            if (!prev) return prev;
+                            return { ...prev, questions: updatedQuestions };
+                          });
 
-                      // Remove from answered questions
-                      setAnsweredQuestions((prev) => {
-                        const newSet = new Set(prev);
-                        newSet.delete(currentQuestionId);
-                        return newSet;
-                      });
+                          // Update localStorage
+                          const savedExams = localStorage.getItem("exams");
+                          if (savedExams) {
+                            const exams = JSON.parse(savedExams) as Exam[];
+                            const updatedExams = exams.map((e) => {
+                              if (e.id === examId) {
+                                return { ...e, questions: updatedQuestions };
+                              }
+                              return e;
+                            });
+                            localStorage.setItem(
+                              "exams",
+                              JSON.stringify(updatedExams),
+                            );
+                          }
+                        }}
+                      >
+                        Clear Notes
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={exam.questions[currentQuestionIndex]?.notes ?? ""}
+                      onChange={(e) => {
+                        const currentQuestionId =
+                          exam.questions[currentQuestionIndex]?.id;
+                        if (!currentQuestionId) return;
 
-                      // Remove from selected answers
-                      setSelectedAnswers((prev) => {
-                        const newAnswers = { ...prev };
-                        delete newAnswers[currentQuestionId];
-                        return newAnswers;
-                      });
+                        const updatedQuestions = exam.questions.map((q) => {
+                          if (q.id === currentQuestionId) {
+                            return { ...q, notes: e.target.value };
+                          }
+                          return q;
+                        });
 
-                      // Update exam in localStorage to reset only current question
-                      const savedExams = localStorage.getItem("exams");
-                      if (savedExams) {
-                        const exams = JSON.parse(savedExams) as Exam[];
-                        const updatedExams = exams.map((e) => {
-                          if (e.id === examId) {
-                            const updatedQuestions = e.questions.map((q) => {
+                        setExam((prev) => {
+                          if (!prev) return prev;
+                          return { ...prev, questions: updatedQuestions };
+                        });
+
+                        // Update localStorage
+                        const savedExams = localStorage.getItem("exams");
+                        if (savedExams) {
+                          const exams = JSON.parse(savedExams) as Exam[];
+                          const updatedExams = exams.map((e) => {
+                            if (e.id === examId) {
+                              return { ...e, questions: updatedQuestions };
+                            }
+                            return e;
+                          });
+                          localStorage.setItem(
+                            "exams",
+                            JSON.stringify(updatedExams),
+                          );
+                        }
+                      }}
+                      placeholder="Add your notes here..."
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Label>Tips</Label>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setShowTips(!showTips)}
+                        >
+                          {showTips ? "Hide Tips" : "Show Tips"}
+                        </Button>
+                      </div>
+                      {showTips && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            const currentQuestionId =
+                              exam.questions[currentQuestionIndex]?.id;
+                            if (!currentQuestionId) return;
+
+                            const updatedQuestions = exam.questions.map((q) => {
                               if (q.id === currentQuestionId) {
-                                return {
-                                  ...q,
-                                  completed: false,
-                                  incorrectAnswers: [],
-                                };
+                                return { ...q, tips: [] };
                               }
                               return q;
                             });
+
+                            setExam((prev) => {
+                              if (!prev) return prev;
+                              return { ...prev, questions: updatedQuestions };
+                            });
+
+                            // Update localStorage
+                            const savedExams = localStorage.getItem("exams");
+                            if (savedExams) {
+                              const exams = JSON.parse(savedExams) as Exam[];
+                              const updatedExams = exams.map((e) => {
+                                if (e.id === examId) {
+                                  return { ...e, questions: updatedQuestions };
+                                }
+                                return e;
+                              });
+                              localStorage.setItem(
+                                "exams",
+                                JSON.stringify(updatedExams),
+                              );
+                            }
+                          }}
+                        >
+                          Clear Tips
+                        </Button>
+                      )}
+                    </div>
+
+                    {showTips && (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          {exam.questions[currentQuestionIndex]?.tips?.map(
+                            (tip, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center gap-2 rounded-md bg-muted p-2"
+                              >
+                                <span className="flex-1">{tip}</span>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    const currentQuestionId =
+                                      exam.questions[currentQuestionIndex]?.id;
+                                    if (!currentQuestionId) return;
+
+                                    const updatedQuestions = exam.questions.map(
+                                      (q) => {
+                                        if (q.id === currentQuestionId) {
+                                          return {
+                                            ...q,
+                                            tips:
+                                              q.tips?.filter(
+                                                (_, i) => i !== index,
+                                              ) ?? [],
+                                          };
+                                        }
+                                        return q;
+                                      },
+                                    );
+
+                                    setExam((prev) => {
+                                      if (!prev) return prev;
+                                      return {
+                                        ...prev,
+                                        questions: updatedQuestions,
+                                      };
+                                    });
+
+                                    // Update localStorage
+                                    const savedExams =
+                                      localStorage.getItem("exams");
+                                    if (savedExams) {
+                                      const exams = JSON.parse(
+                                        savedExams,
+                                      ) as Exam[];
+                                      const updatedExams = exams.map((e) => {
+                                        if (e.id === examId) {
+                                          return {
+                                            ...e,
+                                            questions: updatedQuestions,
+                                          };
+                                        }
+                                        return e;
+                                      });
+                                      localStorage.setItem(
+                                        "exams",
+                                        JSON.stringify(updatedExams),
+                                      );
+                                    }
+                                  }}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            ),
+                          )}
+                        </div>
+
+                        <div className="flex gap-2">
+                          <Input
+                            value={newTip}
+                            onChange={(e) => setNewTip(e.target.value)}
+                            placeholder="Add a new tip..."
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" && newTip.trim()) {
+                                const currentQuestionId =
+                                  exam.questions[currentQuestionIndex]?.id;
+                                if (!currentQuestionId) return;
+
+                                const updatedQuestions = exam.questions.map(
+                                  (q) => {
+                                    if (q.id === currentQuestionId) {
+                                      return {
+                                        ...q,
+                                        tips: [
+                                          ...(q.tips ?? []),
+                                          newTip.trim(),
+                                        ],
+                                      };
+                                    }
+                                    return q;
+                                  },
+                                );
+
+                                setExam((prev) => {
+                                  if (!prev) return prev;
+                                  return {
+                                    ...prev,
+                                    questions: updatedQuestions,
+                                  };
+                                });
+
+                                // Update localStorage
+                                const savedExams =
+                                  localStorage.getItem("exams");
+                                if (savedExams) {
+                                  const exams = JSON.parse(
+                                    savedExams,
+                                  ) as Exam[];
+                                  const updatedExams = exams.map((e) => {
+                                    if (e.id === examId) {
+                                      return {
+                                        ...e,
+                                        questions: updatedQuestions,
+                                      };
+                                    }
+                                    return e;
+                                  });
+                                  localStorage.setItem(
+                                    "exams",
+                                    JSON.stringify(updatedExams),
+                                  );
+                                }
+
+                                setNewTip("");
+                              }
+                            }}
+                          />
+                          <Button
+                            onClick={() => {
+                              if (!newTip.trim()) return;
+
+                              const currentQuestionId =
+                                exam.questions[currentQuestionIndex]?.id;
+                              if (!currentQuestionId) return;
+
+                              const updatedQuestions = exam.questions.map(
+                                (q) => {
+                                  if (q.id === currentQuestionId) {
+                                    return {
+                                      ...q,
+                                      tips: [...(q.tips ?? []), newTip.trim()],
+                                    };
+                                  }
+                                  return q;
+                                },
+                              );
+
+                              setExam((prev) => {
+                                if (!prev) return prev;
+                                return { ...prev, questions: updatedQuestions };
+                              });
+
+                              // Update localStorage
+                              const savedExams = localStorage.getItem("exams");
+                              if (savedExams) {
+                                const exams = JSON.parse(savedExams) as Exam[];
+                                const updatedExams = exams.map((e) => {
+                                  if (e.id === examId) {
+                                    return {
+                                      ...e,
+                                      questions: updatedQuestions,
+                                    };
+                                  }
+                                  return e;
+                                });
+                                localStorage.setItem(
+                                  "exams",
+                                  JSON.stringify(updatedExams),
+                                );
+                              }
+
+                              setNewTip("");
+                            }}
+                          >
+                            Add Tip
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-end gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const currentQuestionId =
+                          exam.questions[currentQuestionIndex]?.id;
+                        if (!currentQuestionId) return;
+
+                        // Clear answer for current question only
+                        setAnswers((prev) => {
+                          const newAnswers = { ...prev };
+                          delete newAnswers[currentQuestionId];
+                          localStorage.setItem(
+                            `exam-answers-${examId}`,
+                            JSON.stringify(newAnswers),
+                          );
+                          return newAnswers;
+                        });
+
+                        // Remove from completed questions
+                        setCompletedQuestions((prev) => {
+                          const newSet = new Set(prev);
+                          newSet.delete(currentQuestionId);
+                          return newSet;
+                        });
+
+                        // Remove from answered questions
+                        setAnsweredQuestions((prev) => {
+                          const newSet = new Set(prev);
+                          newSet.delete(currentQuestionId);
+                          return newSet;
+                        });
+
+                        // Remove from selected answers
+                        setSelectedAnswers((prev) => {
+                          const newAnswers = { ...prev };
+                          delete newAnswers[currentQuestionId];
+                          return newAnswers;
+                        });
+
+                        // Update exam in localStorage to reset only current question
+                        const savedExams = localStorage.getItem("exams");
+                        if (savedExams) {
+                          const exams = JSON.parse(savedExams) as Exam[];
+                          const updatedExams = exams.map((e) => {
+                            if (e.id === examId) {
+                              const updatedQuestions = e.questions.map((q) => {
+                                if (q.id === currentQuestionId) {
+                                  return {
+                                    ...q,
+                                    completed: false,
+                                    incorrectAnswers: [],
+                                  };
+                                }
+                                return q;
+                              });
+                              return {
+                                ...e,
+                                questions: updatedQuestions,
+                                completed: updatedQuestions.every(
+                                  (q) => q.completed,
+                                ),
+                              };
+                            }
+                            return e;
+                          });
+                          localStorage.setItem(
+                            "exams",
+                            JSON.stringify(updatedExams),
+                          );
+
+                          // Update local exam state
+                          setExam((prev) => {
+                            if (!prev) return prev;
                             return {
-                              ...e,
-                              questions: updatedQuestions,
-                              completed: updatedQuestions.every(
+                              ...prev,
+                              questions: prev.questions.map((q) => {
+                                if (q.id === currentQuestionId) {
+                                  return {
+                                    ...q,
+                                    completed: false,
+                                    incorrectAnswers: [],
+                                  };
+                                }
+                                return q;
+                              }),
+                              completed: prev.questions.every(
                                 (q) => q.completed,
                               ),
                             };
-                          }
-                          return e;
-                        });
-                        localStorage.setItem(
-                          "exams",
-                          JSON.stringify(updatedExams),
-                        );
+                          });
+                        }
 
-                        // Update local exam state
-                        setExam((prev) => {
-                          if (!prev) return prev;
-                          return {
-                            ...prev,
-                            questions: prev.questions.map((q) => {
-                              if (q.id === currentQuestionId) {
-                                return {
-                                  ...q,
-                                  completed: false,
-                                  incorrectAnswers: [],
-                                };
-                              }
-                              return q;
-                            }),
-                            completed: prev.questions.every((q) => q.completed),
-                          };
-                        });
-                      }
-
-                      // Force a re-render of the current question
-                      setCurrentQuestionIndex((prev) => prev);
-                    }}
-                  >
-                    Reset Question
-                  </Button>
+                        // Force a re-render of the current question
+                        setCurrentQuestionIndex((prev) => prev);
+                      }}
+                    >
+                      Reset Question
+                    </Button>
+                    <Link href={`/exams/${examId}/edit`}>
+                      <Button variant="outline">Edit Question</Button>
+                    </Link>
+                  </div>
                 </div>
               )}
             </CardContent>

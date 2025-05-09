@@ -15,7 +15,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
-import { PlusCircle, Trash2, Save, Home, Upload, X } from "lucide-react";
+import {
+  PlusCircle,
+  Trash2,
+  Save,
+  Home,
+  Upload,
+  X,
+  ChevronDown,
+} from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Checkbox } from "~/components/ui/checkbox";
@@ -33,6 +41,8 @@ interface Question {
   }>;
   correctAnswer?: string;
   correctAnswers?: string[];
+  subject?: string;
+  topics?: string[];
 }
 
 interface Exam {
@@ -43,65 +53,284 @@ interface Exam {
   icon?: string;
   folderId?: string;
   questions: Question[];
+  subject: string;
+  topics: string[];
 }
+
+interface SubjectSelectorProps {
+  selectedSubject: string;
+  availableSubjects: string[];
+  onSubjectSelect: (subject: string) => void;
+  onSubjectRemove: (subject: string) => void;
+  onNewSubject: (subject: string) => void;
+}
+
+const SubjectSelector: React.FC<SubjectSelectorProps> = ({
+  selectedSubject,
+  availableSubjects,
+  onSubjectSelect,
+  onSubjectRemove,
+  onNewSubject,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [input, setInput] = useState("");
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && input && !availableSubjects.includes(input)) {
+      e.preventDefault();
+      onNewSubject(input);
+      setInput("");
+    }
+  };
+
+  return (
+    <div className="grid gap-2">
+      <Label htmlFor="subject">Subject</Label>
+      <div className="flex flex-col gap-2">
+        {selectedSubject && (
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1">
+              <span>{selectedSubject}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-4 w-4 p-0"
+                onClick={() => onSubjectSelect("")}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+          </div>
+        )}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="relative">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-between"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              Select a subject
+              <ChevronDown className="h-4 w-4" />
+            </Button>
+            {isOpen && (
+              <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
+                {availableSubjects.map((subj) => (
+                  <div
+                    key={subj}
+                    className="flex items-center justify-between px-2 py-1.5 hover:bg-accent"
+                  >
+                    <button
+                      type="button"
+                      className="flex-1 text-left"
+                      onClick={() => {
+                        onSubjectSelect(subj);
+                        setIsOpen(false);
+                      }}
+                    >
+                      {subj}
+                    </button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSubjectRemove(subj);
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Or type a new subject and press Enter"
+              className="w-full"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (input && !availableSubjects.includes(input)) {
+                  onNewSubject(input);
+                  setInput("");
+                }
+              }}
+              disabled={!input}
+            >
+              Add
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function EditExamPage() {
   const params = useParams();
   const router = useRouter();
   const examId = params.id as string;
 
-  const [exam, setExam] = useState<Exam>({
-    id: "",
-    title: "",
-    description: "",
-    timeLimit: 60,
-    questions: [],
-  });
+  const [exam, setExam] = useState<Exam | null>(null);
+  const [examTopicInput, setExamTopicInput] = useState("");
+  const [questionTopicInput, setQuestionTopicInput] = useState("");
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
   useEffect(() => {
     // Load exam from localStorage
     const savedExams = localStorage.getItem("exams");
+    const savedSubjects = localStorage.getItem("exam-subjects");
+
     if (savedExams) {
       const exams = JSON.parse(savedExams) as Exam[];
-      const exam = exams.find((e) => e.id === examId);
-      if (exam) {
-        setExam({ ...exam });
+      const foundExam = exams.find((e) => e.id === examId);
+      if (foundExam) {
+        // Ensure all required fields are present
+        const initializedExam: Exam = {
+          id: foundExam.id,
+          title: foundExam.title || "",
+          description: foundExam.description || "",
+          timeLimit: foundExam.timeLimit || 0,
+          icon: foundExam.icon,
+          folderId: foundExam.folderId,
+          questions: foundExam.questions || [],
+          subject: foundExam.subject || "",
+          topics: foundExam.topics || [],
+        };
+        setExam(initializedExam);
       }
+    }
+
+    if (savedSubjects) {
+      setAvailableSubjects(JSON.parse(savedSubjects) as string[]);
     }
   }, [examId]);
 
+  const handleNewSubject = (subject: string) => {
+    const newSubjects = [...availableSubjects, subject];
+    setAvailableSubjects(newSubjects);
+    setExam((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        subject,
+      };
+    });
+    localStorage.setItem("exam-subjects", JSON.stringify(newSubjects));
+  };
+
+  const handleRemoveAvailableSubject = (subject: string) => {
+    const newSubjects = availableSubjects.filter((s) => s !== subject);
+    setAvailableSubjects(newSubjects);
+    localStorage.setItem("exam-subjects", JSON.stringify(newSubjects));
+    if (exam?.subject === subject) {
+      setExam((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          subject: "",
+        };
+      });
+    }
+  };
+
+  if (!exam) {
+    return (
+      <div className="container py-10">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <h1 className="text-2xl font-bold">Exam not found</h1>
+          <Link href="/">
+            <Button variant="outline">
+              <Home className="mr-2 h-4 w-4" />
+              Back to Home
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const handleAddTopic = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && examTopicInput.trim()) {
+      e.preventDefault();
+      setExam((prev) => {
+        if (!prev) return prev;
+        if (prev.topics.includes(examTopicInput.trim())) return prev;
+        return {
+          ...prev,
+          topics: [...prev.topics, examTopicInput.trim()],
+        };
+      });
+      setExamTopicInput("");
+    }
+  };
+
+  const handleRemoveTopic = (topicToRemove: string) => {
+    setExam((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        topics: prev.topics.filter((topic) => topic !== topicToRemove),
+      };
+    });
+  };
+
   const addQuestion = () => {
-    const newQuestion: Question = {
-      id: crypto.randomUUID(),
-      type: "multiple-choice",
-      question: "",
-      options: [{ text: "", image: undefined }],
-      correctAnswer: "",
-    };
-    setExam((prev) => ({
-      ...prev,
-      questions: [...prev.questions, newQuestion],
-    }));
+    setExam((prev) => {
+      if (!prev) return prev;
+      const newQuestion: Question = {
+        id: crypto.randomUUID(),
+        type: "multiple-choice",
+        question: "",
+        options: [{ text: "", image: undefined }],
+        correctAnswer: "",
+      };
+      return {
+        ...prev,
+        questions: [...prev.questions, newQuestion],
+      };
+    });
   };
 
   const addOption = (questionIndex: number) => {
-    const newQuestions = [...exam.questions];
-    const question = newQuestions[questionIndex];
-    if (!question) return;
+    setExam((prev) => {
+      if (!prev) return prev;
+      const newQuestions = [...prev.questions];
+      const question = newQuestions[questionIndex];
+      if (!question) return prev;
 
-    newQuestions[questionIndex] = {
-      ...question,
-      options: [...question.options, { text: "", image: undefined }],
-    };
-    setExam((prev) => ({ ...prev, questions: newQuestions }));
+      newQuestions[questionIndex] = {
+        ...question,
+        options: [...question.options, { text: "", image: undefined }],
+      };
+      return {
+        ...prev,
+        questions: newQuestions,
+      };
+    });
   };
 
   const removeQuestion = (index: number) => {
-    if (exam.questions.length > 1) {
-      const newQuestions = [...exam.questions];
+    setExam((prev) => {
+      if (!prev) return prev;
+      if (prev.questions.length <= 1) return prev;
+      const newQuestions = [...prev.questions];
       newQuestions.splice(index, 1);
-      setExam((prev) => ({ ...prev, questions: newQuestions }));
-    }
+      return {
+        ...prev,
+        questions: newQuestions,
+      };
+    });
   };
 
   const updateQuestion = (
@@ -109,15 +338,21 @@ export default function EditExamPage() {
     field: keyof Question,
     value: Question[keyof Question],
   ) => {
-    const newQuestions = [...exam.questions];
-    const question = newQuestions[questionIndex];
-    if (!question) return;
+    setExam((prev) => {
+      if (!prev) return prev;
+      const newQuestions = [...prev.questions];
+      const question = newQuestions[questionIndex];
+      if (!question) return prev;
 
-    newQuestions[questionIndex] = {
-      ...question,
-      [field]: value,
-    };
-    setExam((prev) => ({ ...prev, questions: newQuestions }));
+      newQuestions[questionIndex] = {
+        ...question,
+        [field]: value,
+      };
+      return {
+        ...prev,
+        questions: newQuestions,
+      };
+    });
   };
 
   const updateOption = (
@@ -125,20 +360,26 @@ export default function EditExamPage() {
     optionIndex: number,
     value: string,
   ) => {
-    const newQuestions = [...exam.questions];
-    const question = newQuestions[questionIndex];
-    if (!question) return;
+    setExam((prev) => {
+      if (!prev) return prev;
+      const newQuestions = [...prev.questions];
+      const question = newQuestions[questionIndex];
+      if (!question) return prev;
 
-    const newOptions = [...question.options];
-    newOptions[optionIndex] = {
-      ...newOptions[optionIndex],
-      text: value,
-    };
-    newQuestions[questionIndex] = {
-      ...question,
-      options: newOptions,
-    };
-    setExam((prev) => ({ ...prev, questions: newQuestions }));
+      const newOptions = [...question.options];
+      newOptions[optionIndex] = {
+        ...newOptions[optionIndex],
+        text: value,
+      };
+      newQuestions[questionIndex] = {
+        ...question,
+        options: newOptions,
+      };
+      return {
+        ...prev,
+        questions: newQuestions,
+      };
+    });
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,7 +400,13 @@ export default function EditExamPage() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setExam((prev) => ({ ...prev, icon: reader.result as string }));
+      setExam((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          icon: reader.result as string,
+        };
+      });
     };
     reader.readAsDataURL(file);
   };
@@ -183,14 +430,17 @@ export default function EditExamPage() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setExam((prev) => ({
-        ...prev,
-        questions: prev.questions.map((q) =>
-          q.id === questionId
-            ? { ...q, questionImage: reader.result as string }
-            : q,
-        ),
-      }));
+      setExam((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          questions: prev.questions.map((q) =>
+            q.id === questionId
+              ? { ...q, questionImage: reader.result as string }
+              : q,
+          ),
+        };
+      });
     };
     reader.readAsDataURL(file);
   };
@@ -215,65 +465,90 @@ export default function EditExamPage() {
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setExam((prev) => ({
+      setExam((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          questions: prev.questions.map((q) =>
+            q.id === questionId
+              ? {
+                  ...q,
+                  options: q.options.map((opt, idx) =>
+                    idx === optionIndex
+                      ? { ...opt, image: reader.result as string }
+                      : opt,
+                  ),
+                }
+              : q,
+          ),
+        };
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveIcon = () => {
+    setExam((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        icon: undefined,
+      };
+    });
+  };
+
+  const handleRemoveOptionImage = (questionId: string, optionIndex: number) => {
+    setExam((prev) => {
+      if (!prev) return prev;
+      return {
         ...prev,
         questions: prev.questions.map((q) =>
           q.id === questionId
             ? {
                 ...q,
                 options: q.options.map((opt, idx) =>
-                  idx === optionIndex
-                    ? { ...opt, image: reader.result as string }
-                    : opt,
+                  idx === optionIndex ? { ...opt, image: undefined } : opt,
                 ),
               }
             : q,
         ),
-      }));
-    };
-    reader.readAsDataURL(file);
+      };
+    });
+  };
+
+  const handleRemoveOption = (questionId: string, optionIndex: number) => {
+    setExam((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        questions: prev.questions.map((q) =>
+          q.id === questionId
+            ? {
+                ...q,
+                options: q.options.filter((_, idx) => idx !== optionIndex),
+              }
+            : q,
+        ),
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    const updatedExam: Exam = {
-      id: exam.id,
-      title: exam.title,
-      description: exam.description,
-      timeLimit: Number.parseInt(exam.timeLimit.toString()),
-      icon: exam.icon,
-      questions: exam.questions,
-    };
+    if (!exam) return;
 
     try {
-      const savedExams = localStorage.getItem("exams");
-      if (savedExams) {
-        const exams = JSON.parse(savedExams) as Exam[];
-        const updatedExams = exams.map((e) =>
-          e.id === exam.id ? updatedExam : e,
-        );
+      // Save exam to localStorage
+      const oldExams = localStorage.getItem("exams");
+      if (oldExams) {
+        const exams = JSON.parse(oldExams) as Exam[];
+        const updatedExams = exams.map((e) => (e.id === examId ? exam : e));
         localStorage.setItem("exams", JSON.stringify(updatedExams));
       }
       router.push("/");
     } catch (error) {
-      if (error instanceof Error && error.name === "QuotaExceededError") {
-        // Clear old exams to make space
-        const oldExams = localStorage.getItem("exams");
-        if (oldExams) {
-          const exams = JSON.parse(oldExams) as Exam[];
-          // Keep only the 5 most recent exams
-          const recentExams = exams.slice(-5);
-          localStorage.setItem(
-            "exams",
-            JSON.stringify([...recentExams, updatedExam]),
-          );
-        }
-        router.push("/");
-      } else {
-        console.error("Error saving exam:", error);
-        alert("Failed to save exam. Please try again.");
-      }
+      console.error("Error saving exam:", error);
+      alert("Failed to save exam. Please try again.");
     }
   };
 
@@ -311,9 +586,7 @@ export default function EditExamPage() {
                       variant="destructive"
                       size="icon"
                       className="absolute right-1 top-1 h-6 w-6"
-                      onClick={() =>
-                        setExam((prev) => ({ ...prev, icon: undefined }))
-                      }
+                      onClick={handleRemoveIcon}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -377,6 +650,48 @@ export default function EditExamPage() {
                 required
               />
             </div>
+
+            <SubjectSelector
+              selectedSubject={exam.subject}
+              availableSubjects={availableSubjects}
+              onSubjectSelect={(subject) => setExam({ ...exam, subject })}
+              onSubjectRemove={handleRemoveAvailableSubject}
+              onNewSubject={handleNewSubject}
+            />
+
+            <div className="grid gap-2">
+              <Label>Topics</Label>
+              <div className="flex flex-col gap-2">
+                {exam.topics && exam.topics.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {exam.topics.map((topic) => (
+                      <div
+                        key={topic}
+                        className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1"
+                      >
+                        <span>{topic}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-4 w-4 p-0"
+                          onClick={() => handleRemoveTopic(topic)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <Input
+                  value={examTopicInput}
+                  onChange={(e) => setExamTopicInput(e.target.value)}
+                  onKeyDown={handleAddTopic}
+                  placeholder="Type a topic and press Enter"
+                  className="w-full"
+                />
+              </div>
+            </div>
           </CardContent>
         </Card>
 
@@ -416,6 +731,106 @@ export default function EditExamPage() {
                     <SelectItem value="text">Text</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label>Subject</Label>
+                  <Select
+                    value={question.subject ?? "none"}
+                    onValueChange={(value) =>
+                      updateQuestion(
+                        questionIndex,
+                        "subject",
+                        value === "none" ? undefined : value,
+                      )
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select subject" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {availableSubjects.map((subject) => (
+                        <SelectItem key={subject} value={subject}>
+                          {subject}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Topics</Label>
+                  <div className="flex flex-col gap-2">
+                    {question.topics && question.topics.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {question.topics.map((topic) => (
+                          <div
+                            key={topic}
+                            className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1"
+                          >
+                            <span>{topic}</span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-4 w-4 p-0"
+                              onClick={() => {
+                                const newTopics =
+                                  question.topics?.filter((t) => t !== topic) ??
+                                  [];
+                                updateQuestion(
+                                  questionIndex,
+                                  "topics",
+                                  newTopics,
+                                );
+                              }}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <Input
+                        value={questionTopicInput}
+                        onChange={(e) => setQuestionTopicInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && questionTopicInput.trim()) {
+                            e.preventDefault();
+                            const newTopics = [
+                              ...(question.topics ?? []),
+                              questionTopicInput.trim(),
+                            ];
+                            updateQuestion(questionIndex, "topics", newTopics);
+                            setQuestionTopicInput("");
+                          }
+                        }}
+                        placeholder="Type a topic and press Enter"
+                        className="w-full"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          if (questionTopicInput.trim()) {
+                            const newTopics = [
+                              ...(question.topics ?? []),
+                              questionTopicInput.trim(),
+                            ];
+                            updateQuestion(questionIndex, "topics", newTopics);
+                            setQuestionTopicInput("");
+                          }
+                        }}
+                        disabled={!questionTopicInput.trim()}
+                      >
+                        Add
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -504,21 +919,10 @@ export default function EditExamPage() {
                               size="icon"
                               className="absolute right-1 top-1"
                               onClick={() =>
-                                setExam((prev) => ({
-                                  ...prev,
-                                  questions: prev.questions.map((q) =>
-                                    q.id === question.id
-                                      ? {
-                                          ...q,
-                                          options: q.options.map((opt, idx) =>
-                                            idx === optionIndex
-                                              ? { ...opt, image: undefined }
-                                              : opt,
-                                          ),
-                                        }
-                                      : q,
-                                  ),
-                                }))
+                                handleRemoveOptionImage(
+                                  question.id,
+                                  optionIndex,
+                                )
                               }
                             >
                               <X className="h-3 w-3" />
@@ -550,21 +954,9 @@ export default function EditExamPage() {
                         <Button
                           variant="destructive"
                           size="icon"
-                          onClick={() => {
-                            setExam((prev) => ({
-                              ...prev,
-                              questions: prev.questions.map((q) =>
-                                q.id === question.id
-                                  ? {
-                                      ...q,
-                                      options: q.options.filter(
-                                        (_, idx) => idx !== optionIndex,
-                                      ),
-                                    }
-                                  : q,
-                              ),
-                            }));
-                          }}
+                          onClick={() =>
+                            handleRemoveOption(question.id, optionIndex)
+                          }
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -586,23 +978,34 @@ export default function EditExamPage() {
                 <div className="space-y-2">
                   <Label>Correct Answer</Label>
                   <Select
-                    value={question.correctAnswer}
+                    value={question.correctAnswer ?? "none"}
                     onValueChange={(value) =>
-                      updateQuestion(questionIndex, "correctAnswer", value)
+                      updateQuestion(
+                        questionIndex,
+                        "correctAnswer",
+                        value === "none" ? undefined : value,
+                      )
                     }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select correct answer" />
                     </SelectTrigger>
                     <SelectContent>
-                      {question.options.map((option, optionIndex) => (
-                        <SelectItem
-                          key={`${question.id}-option-${optionIndex}`}
-                          value={option.text}
-                        >
-                          {option.text}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="none" disabled>
+                        Select an answer
+                      </SelectItem>
+                      {question.options.map((option, optionIndex) => {
+                        const optionText =
+                          option.text || `Option ${optionIndex + 1}`;
+                        return (
+                          <SelectItem
+                            key={`${question.id}-option-${optionIndex}`}
+                            value={optionText}
+                          >
+                            {optionText}
+                          </SelectItem>
+                        );
+                      })}
                     </SelectContent>
                   </Select>
                 </div>
@@ -620,14 +1023,16 @@ export default function EditExamPage() {
                         <Checkbox
                           id={`correct-${question.id}-${optionIndex}`}
                           checked={question.correctAnswers?.includes(
-                            option.text,
+                            option.text ?? `Option ${optionIndex + 1}`,
                           )}
                           onCheckedChange={(checked) => {
                             const currentAnswers =
                               question.correctAnswers ?? [];
+                            const optionText =
+                              option.text ?? `Option ${optionIndex + 1}`;
                             const newAnswers = checked
-                              ? [...currentAnswers, option.text]
-                              : currentAnswers.filter((a) => a !== option.text);
+                              ? [...currentAnswers, optionText]
+                              : currentAnswers.filter((a) => a !== optionText);
                             updateQuestion(
                               questionIndex,
                               "correctAnswers",
@@ -638,7 +1043,7 @@ export default function EditExamPage() {
                         <Label
                           htmlFor={`correct-${question.id}-${optionIndex}`}
                         >
-                          {option.text}
+                          {option.text ?? `Option ${optionIndex + 1}`}
                         </Label>
                       </div>
                     ))}
@@ -655,7 +1060,7 @@ export default function EditExamPage() {
                       updateQuestion(
                         questionIndex,
                         "correctAnswer",
-                        e.target.value,
+                        e.target.value || undefined,
                       )
                     }
                     placeholder="Enter correct answer"
