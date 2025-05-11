@@ -12,81 +12,13 @@ import { ArrowLeft, ArrowRight, Clock, Home, X } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { Input } from "~/components/ui/input";
-import { SelectItem } from "~/components/ui/select";
-
-type QuestionType = "multiple-choice" | "checkbox" | "text";
-
-interface Question {
-  id: string;
-  type: QuestionType;
-  question: string;
-  questionImage?: string;
-  options: Array<{
-    text: string;
-    image?: string;
-  }>;
-  correctAnswer?: string;
-  correctAnswers?: string[];
-  completed?: boolean;
-  incorrectAnswers: string[];
-  notes?: string;
-  tips?: string[];
-}
-
-interface Exam {
-  id: string;
-  title: string;
-  description: string;
-  timeLimit: number;
-  icon?: string;
-  folderId?: string;
-  questions: Question[];
-  completed?: boolean;
-}
-
-interface QuestionStats {
-  questionId: string;
-  timeSpent: number;
-  isCorrect: boolean;
-  attempts: number;
-  lastAttempted: string;
-}
-
-interface ExamAttempt {
-  id: string;
-  examId: string;
-  startTime: string;
-  endTime: string;
-  totalTime: number;
-  questionStats: QuestionStats[];
-  score: number;
-  totalQuestions: number;
-  correctAnswers: number;
-  incorrectAnswers: number;
-}
-
-interface ExamHistory {
-  examId: string;
-  attempts: ExamAttempt[];
-  averageScore: number;
-  bestScore: number;
-  totalAttempts: number;
-  averageTimePerQuestion: number;
-  lastAttempted: string;
-}
-
-interface ExamSummary {
-  id: string;
-  examId: string;
-  examTitle: string;
-  date: string;
-  score: number;
-  totalQuestions: number;
-  timeSpent: number;
-  timeLimit: number;
-  correctAnswers: number;
-  incorrectAnswers: number;
-}
+import type {
+  Exam,
+  QuestionStats,
+  ExamAttempt,
+  ExamHistory,
+  ExamSummary,
+} from "~/types";
 
 export default function ExamPage() {
   const params = useParams();
@@ -101,12 +33,10 @@ export default function ExamPage() {
   const [completedQuestions, setCompletedQuestions] = useState<Set<string>>(
     new Set(),
   );
-  const [answeredQuestions, setAnsweredQuestions] = useState<Set<string>>(
-    new Set(),
+  const [, setAnsweredQuestions] = useState<Set<string>>(new Set());
+  const [, setSelectedAnswers] = useState<Record<string, string | string[]>>(
+    {},
   );
-  const [selectedAnswers, setSelectedAnswers] = useState<
-    Record<string, string | string[]>
-  >({});
   const [showTips, setShowTips] = useState(false);
   const [newTip, setNewTip] = useState("");
   const [questionStartTimes, setQuestionStartTimes] = useState<
@@ -114,14 +44,6 @@ export default function ExamPage() {
   >({});
   const [examStartTime, setExamStartTime] = useState<number>(0);
   const [examHistory, setExamHistory] = useState<ExamHistory | null>(null);
-
-  const handleSubmit = useCallback(() => {
-    if (mode === "take") {
-      const questionStats = calculateQuestionStats();
-      updateExamHistory(questionStats);
-      setIsSubmitted(true);
-    }
-  }, [mode, exam, questionStartTimes, examStartTime, examHistory]);
 
   useEffect(() => {
     // Load exam from localStorage
@@ -179,23 +101,6 @@ export default function ExamPage() {
       }
     }
   }, [examId, mode]);
-
-  useEffect(() => {
-    if (mode === "take" && timeLeft > 0) {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            clearInterval(timer);
-            handleSubmit();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }
-  }, [mode, timeLeft, handleSubmit]);
 
   const handleAnswerChange = (questionId: string, value: string | string[]) => {
     const question = exam?.questions.find((q) => q.id === questionId);
@@ -329,7 +234,41 @@ export default function ExamPage() {
     }
   }, [currentQuestionIndex, exam, mode]);
 
-  const calculateQuestionStats = (): QuestionStats[] => {
+  const isAnswerCorrect = useCallback(
+    (questionId: string) => {
+      if (!exam) return false;
+      const question = exam.questions.find((q) => q.id === questionId);
+      if (!question) return false;
+
+      const userAnswer = answers[questionId];
+      if (!userAnswer) return false;
+
+      if (question.type === "multiple-choice") {
+        return userAnswer === question.correctAnswer;
+      }
+
+      if (question.type === "checkbox") {
+        const correctAnswers = question.correctAnswers ?? [];
+        const userAnswers = userAnswer as string[];
+        return (
+          correctAnswers.length === userAnswers.length &&
+          correctAnswers.every((answer) => userAnswers.includes(answer))
+        );
+      }
+
+      if (question.type === "text") {
+        return (
+          userAnswer.toString().toLowerCase().trim() ===
+          question.correctAnswer?.toLowerCase().trim()
+        );
+      }
+
+      return false;
+    },
+    [exam, answers],
+  );
+
+  const calculateQuestionStats = useCallback((): QuestionStats[] => {
     if (!exam) return [];
 
     return exam.questions.map((question) => {
@@ -345,75 +284,103 @@ export default function ExamPage() {
         lastAttempted: new Date().toISOString(),
       };
     });
-  };
+  }, [exam, isAnswerCorrect, questionStartTimes]);
 
-  const updateExamHistory = (questionStats: QuestionStats[]) => {
-    if (!exam || !questionStats.length) return;
+  const updateExamHistory = useCallback(
+    (questionStats: QuestionStats[]) => {
+      if (!exam || !questionStats.length) return;
 
-    const correctAnswers = questionStats.filter(
-      (stat) => stat.isCorrect,
-    ).length;
-    const totalQuestions = exam.questions.length;
-    const score = (correctAnswers / totalQuestions) * 100;
-    const totalTime = (Date.now() - examStartTime) / 1000;
+      const correctAnswers = questionStats.filter(
+        (stat) => stat.isCorrect,
+      ).length;
+      const totalQuestions = exam.questions.length;
+      const score = (correctAnswers / totalQuestions) * 100;
+      const totalTime = (Date.now() - examStartTime) / 1000;
 
-    const newAttempt: ExamAttempt = {
-      id: crypto.randomUUID(),
-      examId: exam.id,
-      startTime: new Date(examStartTime).toISOString(),
-      endTime: new Date().toISOString(),
-      totalTime,
-      questionStats,
-      score,
-      totalQuestions,
-      correctAnswers,
-      incorrectAnswers: totalQuestions - correctAnswers,
-    };
+      const newAttempt: ExamAttempt = {
+        id: crypto.randomUUID(),
+        examId: exam.id,
+        startTime: new Date(examStartTime).toISOString(),
+        endTime: new Date().toISOString(),
+        totalTime,
+        questionStats,
+        score,
+        totalQuestions,
+        correctAnswers,
+        incorrectAnswers: totalQuestions - correctAnswers,
+      };
 
-    const updatedHistory: ExamHistory = {
-      examId: exam.id,
-      attempts: [...(examHistory?.attempts ?? []), newAttempt],
-      averageScore: examHistory
-        ? (examHistory.averageScore * examHistory.totalAttempts + score) /
-          (examHistory.totalAttempts + 1)
-        : score,
-      bestScore: examHistory ? Math.max(examHistory.bestScore, score) : score,
-      totalAttempts: (examHistory?.totalAttempts ?? 0) + 1,
-      averageTimePerQuestion: examHistory
-        ? (examHistory.averageTimePerQuestion * examHistory.totalAttempts +
-            totalTime / totalQuestions) /
-          (examHistory.totalAttempts + 1)
-        : totalTime / totalQuestions,
-      lastAttempted: new Date().toISOString(),
-    };
+      const updatedHistory: ExamHistory = {
+        examId: exam.id,
+        attempts: [...(examHistory?.attempts ?? []), newAttempt],
+        averageScore: examHistory
+          ? (examHistory.averageScore * examHistory.totalAttempts + score) /
+            (examHistory.totalAttempts + 1)
+          : score,
+        bestScore: examHistory ? Math.max(examHistory.bestScore, score) : score,
+        totalAttempts: (examHistory?.totalAttempts ?? 0) + 1,
+        averageTimePerQuestion: examHistory
+          ? (examHistory.averageTimePerQuestion * examHistory.totalAttempts +
+              totalTime / totalQuestions) /
+            (examHistory.totalAttempts + 1)
+          : totalTime / totalQuestions,
+        lastAttempted: new Date().toISOString(),
+      };
 
-    setExamHistory(updatedHistory);
-    localStorage.setItem(
-      `exam-history-${examId}`,
-      JSON.stringify(updatedHistory),
-    );
+      setExamHistory(updatedHistory);
+      localStorage.setItem(
+        `exam-history-${examId}`,
+        JSON.stringify(updatedHistory),
+      );
 
-    // Save summary for the summary page
-    const examSummary: ExamSummary = {
-      id: newAttempt.id,
-      examId: exam.id,
-      examTitle: exam.title,
-      date: new Date().toLocaleDateString(),
-      score,
-      totalQuestions,
-      timeSpent: Math.round(totalTime / 60), // Convert to minutes
-      timeLimit: exam.timeLimit,
-      correctAnswers,
-      incorrectAnswers: totalQuestions - correctAnswers,
-    };
+      // Save summary for the summary page
+      const examSummary: ExamSummary = {
+        id: newAttempt.id,
+        examId: exam.id,
+        examTitle: exam.title,
+        date: new Date().toLocaleDateString(),
+        score,
+        totalQuestions,
+        timeSpent: Math.round(totalTime / 60), // Convert to minutes
+        timeLimit: exam.timeLimit,
+        correctAnswers,
+        incorrectAnswers: totalQuestions - correctAnswers,
+      };
 
-    const savedSummaries = localStorage.getItem("examSummaries");
-    const summaries: ExamSummary[] = savedSummaries
-      ? (JSON.parse(savedSummaries) as ExamSummary[])
-      : [];
-    summaries.push(examSummary);
-    localStorage.setItem("examSummaries", JSON.stringify(summaries));
-  };
+      const savedSummaries = localStorage.getItem("examSummaries");
+      const summaries: ExamSummary[] = savedSummaries
+        ? (JSON.parse(savedSummaries) as ExamSummary[])
+        : [];
+      summaries.push(examSummary);
+      localStorage.setItem("examSummaries", JSON.stringify(summaries));
+    },
+    [exam, examId, examHistory, examStartTime],
+  );
+
+  const handleSubmit = useCallback(() => {
+    if (mode === "take") {
+      const questionStats = calculateQuestionStats();
+      updateExamHistory(questionStats);
+      setIsSubmitted(true);
+    }
+  }, [mode, calculateQuestionStats, updateExamHistory]);
+
+  useEffect(() => {
+    if (mode === "take" && timeLeft > 0) {
+      const timer = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            handleSubmit();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => clearInterval(timer);
+    }
+  }, [mode, timeLeft, handleSubmit]);
 
   if (!exam) {
     return (
@@ -453,36 +420,6 @@ export default function ExamPage() {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
-
-  const isAnswerCorrect = (questionId: string) => {
-    const question = exam.questions.find((q) => q.id === questionId);
-    if (!question) return false;
-
-    const userAnswer = answers[questionId];
-    if (!userAnswer) return false;
-
-    if (question.type === "multiple-choice") {
-      return userAnswer === question.correctAnswer;
-    }
-
-    if (question.type === "checkbox") {
-      const correctAnswers = question.correctAnswers ?? [];
-      const userAnswers = userAnswer as string[];
-      return (
-        correctAnswers.length === userAnswers.length &&
-        correctAnswers.every((answer) => userAnswers.includes(answer))
-      );
-    }
-
-    if (question.type === "text") {
-      return (
-        userAnswer.toString().toLowerCase().trim() ===
-        question.correctAnswer?.toLowerCase().trim()
-      );
-    }
-
-    return false;
   };
 
   return (

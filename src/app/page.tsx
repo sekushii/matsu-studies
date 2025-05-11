@@ -36,33 +36,7 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Label } from "~/components/ui/label";
-
-interface Exam {
-  id: string;
-  title: string;
-  description: string;
-  timeLimit: number;
-  icon?: string;
-  folderId?: string;
-  questions: Array<{
-    id: string;
-    type: string;
-    question: string;
-    options?: string[];
-    correctAnswer?: string;
-    correctAnswers?: string[];
-  }>;
-  completed: boolean;
-  subject?: string;
-  topics?: string[];
-}
-
-interface Folder {
-  id: string;
-  name: string;
-  icon?: string; // Base64 image data
-  exams: string[]; // Array of exam IDs
-}
+import type { Exam, Folder } from "~/types";
 
 export default function ExamListPage() {
   const [exams, setExams] = useState<Exam[]>([]);

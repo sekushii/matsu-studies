@@ -27,41 +27,12 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { Checkbox } from "~/components/ui/checkbox";
-
-type QuestionType = "multiple-choice" | "checkbox" | "text";
-
-interface Question {
-  id: string;
-  type: QuestionType;
-  question: string;
-  questionImage?: string | null;
-  options: Array<{
-    text: string;
-    image?: string | null;
-  }>;
-  correctAnswer?: string;
-  correctAnswers?: string[];
-}
-
-interface Exam {
-  id: string;
-  title: string;
-  description: string;
-  timeLimit: number;
-  icon?: string; // Base64 image data
-  folderId?: string;
-  questions: Question[];
-  subject: string;
-  topics: string[];
-}
-
-interface SubjectSelectorProps {
-  selectedSubject: string;
-  availableSubjects: string[];
-  onSubjectSelect: (subject: string) => void;
-  onSubjectRemove: (subject: string) => void;
-  onNewSubject: (subject: string) => void;
-}
+import type {
+  Question,
+  Exam,
+  SubjectSelectorProps,
+  QuestionType,
+} from "~/types";
 
 const SubjectSelector: React.FC<SubjectSelectorProps> = ({
   selectedSubject,

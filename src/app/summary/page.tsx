@@ -7,7 +7,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "../../components/ui/card";
+} from "~/components/ui/card";
 import { Button } from "../../components/ui/button";
 import {
   Table,
@@ -16,8 +16,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "../../components/ui/table";
-import { Input } from "../../components/ui/input";
+} from "~/components/ui/table";
+import { Input } from "~/components/ui/input";
 import {
   Home,
   Clock,
@@ -29,72 +29,13 @@ import {
   Download,
 } from "lucide-react";
 import Link from "next/link";
-
-interface ExamSummary {
-  id: string;
-  examId: string;
-  examTitle: string;
-  date: string;
-  score: number;
-  totalQuestions: number;
-  timeSpent: number;
-  timeLimit: number;
-  correctAnswers: number;
-  incorrectAnswers: number;
-}
-
-type SortField = "date" | "examTitle" | "score" | "timeSpent";
-type SortOrder = "asc" | "desc";
-
-interface ExamHistory {
-  examId: string;
-  attempts: ExamAttempt[];
-  averageScore: number;
-  bestScore: number;
-  totalAttempts: number;
-  averageTimePerQuestion: number;
-  lastAttempted: string;
-}
-
-interface QuestionStats {
-  questionId: string;
-  timeSpent: number;
-  isCorrect: boolean;
-  attempts: number;
-  lastAttempted: string;
-}
-
-interface ExamAttempt {
-  id: string;
-  examId: string;
-  startTime: string;
-  endTime: string;
-  totalTime: number;
-  questionStats: QuestionStats[];
-  score: number;
-  totalQuestions: number;
-  correctAnswers: number;
-  incorrectAnswers: number;
-}
-
-interface Exam {
-  id: string;
-  title: string;
-  description: string;
-  timeLimit: number;
-  questions: Array<{
-    id: string;
-    type: string;
-    question: string;
-    options?: Array<{ text: string; image?: string }>;
-    correctAnswer?: string;
-    correctAnswers?: string[];
-    subject?: string;
-    topics?: string[];
-  }>;
-  subject?: string;
-  topics?: string[];
-}
+import type {
+  ExamSummary,
+  ExamHistory,
+  Exam,
+  SortField,
+  SortOrder,
+} from "~/types";
 
 export default function SummaryPage() {
   const [summaries, setSummaries] = useState<ExamSummary[]>([]);
@@ -104,7 +45,7 @@ export default function SummaryPage() {
   const [selectedExamId, setSelectedExamId] = useState<string | null>(null);
   const [examHistory, setExamHistory] = useState<ExamHistory | null>(null);
   const [selectedExam, setSelectedExam] = useState<Exam | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [, setIsDetailsOpen] = useState(false);
 
   useEffect(() => {
     const savedSummaries = localStorage.getItem("examSummaries");

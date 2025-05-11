@@ -27,43 +27,12 @@ import {
 import Link from "next/link";
 import Image from "next/image";
 import { Checkbox } from "~/components/ui/checkbox";
-
-type QuestionType = "multiple-choice" | "checkbox" | "text";
-
-interface Question {
-  id: string;
-  type: QuestionType;
-  question: string;
-  questionImage?: string;
-  options: Array<{
-    text: string;
-    image?: string;
-  }>;
-  correctAnswer?: string;
-  correctAnswers?: string[];
-  subject?: string;
-  topics?: string[];
-}
-
-interface Exam {
-  id: string;
-  title: string;
-  description: string;
-  timeLimit: number;
-  icon?: string;
-  folderId?: string;
-  questions: Question[];
-  subject: string;
-  topics: string[];
-}
-
-interface SubjectSelectorProps {
-  selectedSubject: string;
-  availableSubjects: string[];
-  onSubjectSelect: (subject: string) => void;
-  onSubjectRemove: (subject: string) => void;
-  onNewSubject: (subject: string) => void;
-}
+import type {
+  Question,
+  Exam,
+  SubjectSelectorProps,
+  QuestionType,
+} from "~/types";
 
 const SubjectSelector: React.FC<SubjectSelectorProps> = ({
   selectedSubject,
@@ -204,8 +173,8 @@ export default function EditExamPage() {
           icon: foundExam.icon,
           folderId: foundExam.folderId,
           questions: foundExam.questions || [],
-          subject: foundExam.subject || "",
-          topics: foundExam.topics || [],
+          subject: foundExam.subject ?? "",
+          topics: foundExam.topics ?? [],
         };
         setExam(initializedExam);
       }
@@ -265,10 +234,10 @@ export default function EditExamPage() {
       e.preventDefault();
       setExam((prev) => {
         if (!prev) return prev;
-        if (prev.topics.includes(examTopicInput.trim())) return prev;
+        if (prev?.topics?.includes(examTopicInput.trim())) return prev;
         return {
           ...prev,
-          topics: [...prev.topics, examTopicInput.trim()],
+          topics: [...(prev.topics ?? []), examTopicInput.trim()],
         };
       });
       setExamTopicInput("");
@@ -280,7 +249,7 @@ export default function EditExamPage() {
       if (!prev) return prev;
       return {
         ...prev,
-        topics: prev.topics.filter((topic) => topic !== topicToRemove),
+        topics: (prev.topics ?? []).filter((topic) => topic !== topicToRemove),
       };
     });
   };
@@ -652,7 +621,7 @@ export default function EditExamPage() {
             </div>
 
             <SubjectSelector
-              selectedSubject={exam.subject}
+              selectedSubject={exam.subject ?? ""}
               availableSubjects={availableSubjects}
               onSubjectSelect={(subject) => setExam({ ...exam, subject })}
               onSubjectRemove={handleRemoveAvailableSubject}
