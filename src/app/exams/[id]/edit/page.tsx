@@ -30,120 +30,11 @@ import { Checkbox } from "~/components/ui/checkbox";
 import type {
   Question,
   Exam,
-  SubjectSelectorProps,
   QuestionType,
 } from "~/types";
-
-const SubjectSelector: React.FC<SubjectSelectorProps> = ({
-  selectedSubject,
-  availableSubjects,
-  onSubjectSelect,
-  onSubjectRemove,
-  onNewSubject,
-}) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const [input, setInput] = useState("");
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && input && !availableSubjects.includes(input)) {
-      e.preventDefault();
-      onNewSubject(input);
-      setInput("");
-    }
-  };
-
-  return (
-    <div className="grid gap-2">
-      <Label htmlFor="subject">Subject</Label>
-      <div className="flex flex-col gap-2">
-        {selectedSubject && (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1">
-              <span>{selectedSubject}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0"
-                onClick={() => onSubjectSelect("")}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          </div>
-        )}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div className="relative">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full justify-between"
-              onClick={() => setIsOpen(!isOpen)}
-            >
-              Select a subject
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-            {isOpen && (
-              <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
-                {availableSubjects.map((subj) => (
-                  <div
-                    key={subj}
-                    className="flex items-center justify-between px-2 py-1.5 hover:bg-accent"
-                  >
-                    <button
-                      type="button"
-                      className="flex-1 text-left"
-                      onClick={() => {
-                        onSubjectSelect(subj);
-                        setIsOpen(false);
-                      }}
-                    >
-                      {subj}
-                    </button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSubjectRemove(subj);
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder="Or type a new subject and press Enter"
-              className="w-full"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                if (input && !availableSubjects.includes(input)) {
-                  onNewSubject(input);
-                  setInput("");
-                }
-              }}
-              disabled={!input}
-            >
-              Add
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
+import { SubjectSelector } from "~/components/SubjectSelector";
+import { TopicManager } from "~/components/TopicManager";
+import { useSubjects } from "~/hooks/useSubjects";
 
 export default function EditExamPage() {
   const params = useParams();
@@ -151,14 +42,12 @@ export default function EditExamPage() {
   const examId = params.id as string;
 
   const [exam, setExam] = useState<Exam | null>(null);
-  const [examTopicInput, setExamTopicInput] = useState("");
+  const { availableSubjects, addSubject, removeSubject } = useSubjects();
   const [questionTopicInput, setQuestionTopicInput] = useState("");
-  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
   useEffect(() => {
     // Load exam from localStorage
     const savedExams = localStorage.getItem("exams");
-    const savedSubjects = localStorage.getItem("exam-subjects");
 
     if (savedExams) {
       const exams = JSON.parse(savedExams) as Exam[];
@@ -179,69 +68,17 @@ export default function EditExamPage() {
         setExam(initializedExam);
       }
     }
-
-    if (savedSubjects) {
-      setAvailableSubjects(JSON.parse(savedSubjects) as string[]);
-    }
   }, [examId]);
 
-  const handleNewSubject = (subject: string) => {
-    const newSubjects = [...availableSubjects, subject];
-    setAvailableSubjects(newSubjects);
+  const handleAddTopic = (topic: string) => {
     setExam((prev) => {
       if (!prev) return prev;
+      if (prev?.topics?.includes(topic)) return prev;
       return {
         ...prev,
-        subject,
+        topics: [...(prev.topics ?? []), topic],
       };
     });
-    localStorage.setItem("exam-subjects", JSON.stringify(newSubjects));
-  };
-
-  const handleRemoveAvailableSubject = (subject: string) => {
-    const newSubjects = availableSubjects.filter((s) => s !== subject);
-    setAvailableSubjects(newSubjects);
-    localStorage.setItem("exam-subjects", JSON.stringify(newSubjects));
-    if (exam?.subject === subject) {
-      setExam((prev) => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          subject: "",
-        };
-      });
-    }
-  };
-
-  if (!exam) {
-    return (
-      <div className="container py-10">
-        <div className="flex flex-col items-center justify-center gap-4">
-          <h1 className="text-2xl font-bold">Exam not found</h1>
-          <Link href="/">
-            <Button variant="outline">
-              <Home className="mr-2 h-4 w-4" />
-              Back to Home
-            </Button>
-          </Link>
-        </div>
-      </div>
-    );
-  }
-
-  const handleAddTopic = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && examTopicInput.trim()) {
-      e.preventDefault();
-      setExam((prev) => {
-        if (!prev) return prev;
-        if (prev?.topics?.includes(examTopicInput.trim())) return prev;
-        return {
-          ...prev,
-          topics: [...(prev.topics ?? []), examTopicInput.trim()],
-        };
-      });
-      setExamTopicInput("");
-    }
   };
 
   const handleRemoveTopic = (topicToRemove: string) => {
@@ -521,6 +358,29 @@ export default function EditExamPage() {
     }
   };
 
+  if (!exam) {
+    return (
+      <div className="container py-10">
+        <div className="flex flex-col items-center justify-center gap-4">
+          <h1 className="text-2xl font-bold">Exam not found</h1>
+          <Link href="/">
+            <Button variant="outline">
+              <Home className="mr-2 h-4 w-4" />
+              Back to Home
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const updateExam = (updates: Partial<Exam>) => {
+    setExam((prev) => {
+      if (!prev) return prev;
+      return { ...prev, ...updates };
+    });
+  };
+
   return (
     <div className="container py-10">
       <div className="mb-6 flex items-center justify-between">
@@ -584,8 +444,8 @@ export default function EditExamPage() {
               <Label htmlFor="title">Exam Title</Label>
               <Input
                 id="title"
-                value={exam.title || ""}
-                onChange={(e) => setExam({ ...exam, title: e.target.value })}
+                value={exam.title}
+                onChange={(e) => updateExam({ title: e.target.value })}
                 placeholder="Enter exam title"
                 required
               />
@@ -595,10 +455,8 @@ export default function EditExamPage() {
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
-                value={exam.description || ""}
-                onChange={(e) =>
-                  setExam({ ...exam, description: e.target.value })
-                }
+                value={exam.description}
+                onChange={(e) => updateExam({ description: e.target.value })}
                 placeholder="Enter exam description"
               />
             </div>
@@ -608,13 +466,8 @@ export default function EditExamPage() {
               <Input
                 id="timeLimit"
                 type="number"
-                value={exam.timeLimit.toString()}
-                onChange={(e) =>
-                  setExam({
-                    ...exam,
-                    timeLimit: Number.parseInt(e.target.value),
-                  })
-                }
+                value={exam.timeLimit}
+                onChange={(e) => updateExam({ timeLimit: parseInt(e.target.value) || 0 })}
                 min="1"
                 required
               />
@@ -623,44 +476,16 @@ export default function EditExamPage() {
             <SubjectSelector
               selectedSubject={exam.subject ?? ""}
               availableSubjects={availableSubjects}
-              onSubjectSelect={(subject) => setExam({ ...exam, subject })}
-              onSubjectRemove={handleRemoveAvailableSubject}
-              onNewSubject={handleNewSubject}
+              onSubjectSelect={(subject) => updateExam({ subject })}
+              onSubjectRemove={removeSubject}
+              onNewSubject={addSubject}
             />
 
-            <div className="grid gap-2">
-              <Label>Topics</Label>
-              <div className="flex flex-col gap-2">
-                {exam.topics && exam.topics.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {exam.topics.map((topic) => (
-                      <div
-                        key={topic}
-                        className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1"
-                      >
-                        <span>{topic}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-4 w-4 p-0"
-                          onClick={() => handleRemoveTopic(topic)}
-                        >
-                          <X className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <Input
-                  value={examTopicInput}
-                  onChange={(e) => setExamTopicInput(e.target.value)}
-                  onKeyDown={handleAddTopic}
-                  placeholder="Type a topic and press Enter"
-                  className="w-full"
-                />
-              </div>
-            </div>
+            <TopicManager
+              topics={exam.topics ?? []}
+              onAddTopic={handleAddTopic}
+              onRemoveTopic={handleRemoveTopic}
+            />
           </CardContent>
         </Card>
 
