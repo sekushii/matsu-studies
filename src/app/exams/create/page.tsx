@@ -20,11 +20,8 @@ import {
   Trash2,
   Save,
   Home,
-  Upload,
-  X,
 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { Checkbox } from "~/components/ui/checkbox";
 import type {
   Question,
@@ -34,6 +31,7 @@ import type {
 import { SubjectSelector } from "~/components/SubjectSelector";
 import { TopicManager } from "~/components/TopicManager";
 import { useSubjects } from "~/hooks/useSubjects";
+import { ImageUpload } from "~/components/ImageUpload";
 
 export default function CreateExamPage() {
   const router = useRouter();
@@ -62,29 +60,6 @@ export default function CreateExamPage() {
 
   const handleRemoveTopic = (topicToRemove: string) => {
     setTopics(topics.filter((topic) => topic !== topicToRemove));
-  };
-
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Check if file is an image
-    if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file");
-      return;
-    }
-
-    // Check file size (max 2MB)
-    if (file.size > 2 * 1024 * 1024) {
-      alert("Image size should be less than 2MB");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setSelectedIcon(reader.result as string);
-    };
-    reader.readAsDataURL(file);
   };
 
   const addQuestion = () => {
@@ -181,74 +156,6 @@ export default function CreateExamPage() {
     setQuestions(newQuestions);
   };
 
-  const handleQuestionImageUpload = (
-    questionId: string,
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file");
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert("Image size should be less than 2MB");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setQuestions((prev) =>
-        prev.map((q) =>
-          q.id === questionId
-            ? { ...q, questionImage: reader.result as string }
-            : q,
-        ),
-      );
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleOptionImageUpload = (
-    questionId: string,
-    optionIndex: number,
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith("image/")) {
-      alert("Please upload an image file");
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert("Image size should be less than 2MB");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setQuestions((prev) =>
-        prev.map((q) =>
-          q.id === questionId
-            ? {
-                ...q,
-                options: q.options.map((opt, idx) =>
-                  idx === optionIndex
-                    ? { ...opt, image: reader.result as string }
-                    : opt,
-                ),
-              }
-            : q,
-        ),
-      );
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -292,45 +199,14 @@ export default function CreateExamPage() {
               <CardTitle>Exam Details</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="icon">Exam Icon</Label>
-                <div className="flex items-center gap-4">
-                  {selectedIcon && (
-                    <div className="relative h-20 w-20 overflow-hidden rounded-md border">
-                      <Image
-                        src={selectedIcon}
-                        alt="Exam icon"
-                        fill
-                        className="object-cover"
-                      />
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="icon"
-                        className="absolute right-1 top-1 h-6 w-6"
-                        onClick={() => setSelectedIcon("")}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                  <div className="flex-1">
-                    <Input
-                      id="icon"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                    <Label
-                      htmlFor="icon"
-                      className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed p-4 hover:bg-muted"
-                    >
-                      <Upload className="h-4 w-4" />
-                      <span>Upload an image (max 2MB)</span>
-                    </Label>
-                  </div>
-                </div>
+              <div className="space-y-2">
+                <Label>Exam Icon</Label>
+                <ImageUpload
+                  id="exam-icon"
+                  value={selectedIcon}
+                  onChange={setSelectedIcon}
+                  uploadButtonText="Upload exam icon"
+                />
               </div>
 
               <div className="grid gap-2">
@@ -399,46 +275,17 @@ export default function CreateExamPage() {
                     }
                     placeholder="Enter your question"
                   />
-                  <div className="relative aspect-video w-full max-w-md overflow-hidden rounded-md border">
-                    {question.questionImage ? (
-                      <>
-                        <Image
-                          src={question.questionImage}
-                          alt="Question"
-                          fill
-                          className="object-contain"
-                        />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          className="absolute right-2 top-2"
-                          onClick={() =>
-                            updateQuestion(index, "questionImage", null)
-                          }
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </>
-                    ) : (
-                      <div className="flex h-full items-center justify-center">
-                        <Label
-                          htmlFor={`question-image-${question.id}`}
-                          className="flex h-full w-full cursor-pointer items-center justify-center"
-                        >
-                          <Upload className="h-8 w-8 text-muted-foreground" />
-                          <input
-                            id={`question-image-${question.id}`}
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) =>
-                              handleQuestionImageUpload(question.id, e)
-                            }
-                          />
-                        </Label>
-                      </div>
-                    )}
-                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Question Image (Optional)</Label>
+                  <ImageUpload
+                    id={`question-image-${question.id}`}
+                    value={question.image}
+                    onChange={(value: string | null) => updateQuestion(index, "image", value)}
+                    aspectRatio="video"
+                    uploadButtonText="Add image to question"
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -453,61 +300,24 @@ export default function CreateExamPage() {
                           }
                           placeholder={`Option ${optionIndex + 1}`}
                         />
-                        <div className="relative aspect-square w-24 overflow-hidden rounded-md border">
-                          {option.image ? (
-                            <>
-                              <Image
-                                src={option.image}
-                                alt={`Option ${optionIndex + 1}`}
-                                fill
-                                className="object-contain"
-                              />
-                              <Button
-                                variant="destructive"
-                                size="icon"
-                                className="absolute right-1 top-1"
-                                onClick={() =>
-                                  setQuestions((prev) =>
-                                    prev.map((q) =>
-                                      q.id === question.id
-                                        ? {
-                                            ...q,
-                                            options: q.options.map(
-                                              (opt, idx) =>
-                                                idx === optionIndex
-                                                  ? { ...opt, image: undefined }
-                                                  : opt,
-                                            ),
-                                          }
-                                        : q,
-                                    ),
-                                  )
-                                }
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </>
-                          ) : (
-                            <Label
-                              htmlFor={`option-image-${question.id}-${optionIndex}`}
-                              className="flex h-full w-full cursor-pointer items-center justify-center"
-                            >
-                              <Upload className="h-6 w-6 text-muted-foreground" />
-                              <input
-                                id={`option-image-${question.id}-${optionIndex}`}
-                                type="file"
-                                accept="image/*"
-                                className="hidden"
-                                onChange={(e) =>
-                                  handleOptionImageUpload(
-                                    question.id,
-                                    optionIndex,
-                                    e,
-                                  )
-                                }
-                              />
-                            </Label>
-                          )}
+                        <div className="space-y-2">
+                          <Label>Option Image (Optional)</Label>
+                          <ImageUpload
+                            id={`option-image-${question.id}-${optionIndex}`}
+                            value={option.image}
+                            onChange={(value: string | null) => {
+                              const newOptions = [...question.options];
+                              const currentOption = newOptions[optionIndex];
+                              if (!currentOption) return;
+                              
+                              newOptions[optionIndex] = { 
+                                text: currentOption.text,
+                                image: value 
+                              };
+                              updateQuestion(index, "options", newOptions);
+                            }}
+                            uploadButtonText="Add image to option"
+                          />
                         </div>
                         {question.options.length > 1 && (
                           <Button

@@ -591,11 +591,11 @@ export default function ExamPage() {
                 {exam.questions[currentQuestionIndex]?.question}
               </p>
 
-              {exam.questions[currentQuestionIndex]?.questionImage && (
+              {exam.questions[currentQuestionIndex]?.image && (
                 <div className="relative aspect-video w-full max-w-md overflow-hidden rounded-md">
                   <Image
                     src={
-                      exam.questions[currentQuestionIndex]?.questionImage ?? ""
+                      exam.questions[currentQuestionIndex]?.image ?? ""
                     }
                     alt="Question"
                     fill

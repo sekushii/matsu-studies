@@ -5,7 +5,7 @@ export interface Question {
   id: string;
   type: QuestionType;
   question: string;
-  questionImage?: string | null;
+  image?: string | null;
   options: Array<{
     text: string;
     image?: string | null;
