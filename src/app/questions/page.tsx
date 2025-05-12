@@ -12,41 +12,25 @@ import {
   SelectValue,
 } from "~/components/ui/select";
 import { Badge } from "~/components/ui/badge";
-import { X, Search, Filter, PlusCircle } from "lucide-react";
+import { X, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "~/components/ui/checkbox";
+import type { Exam, Question } from "~/types";
 
-interface Question {
-  id: string;
-  type: "multiple-choice" | "checkbox" | "text";
-  question: string;
-  options?: { text: string; image?: string }[];
-  correctAnswer?: string | string[];
+interface QuestionWithExamInfo extends Question {
   examId: string;
   examTitle: string;
-  subject?: string;
-  topics?: string[];
-}
-
-interface Exam {
-  id: string;
-  title: string;
-  description: string;
-  timeLimit: number;
-  questions: Question[];
-  subject?: string;
-  topics?: string[];
 }
 
 export default function QuestionsPage() {
   const router = useRouter();
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const [questions, setQuestions] = useState<QuestionWithExamInfo[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("all");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
-  const [availableTopics, setAvailableTopics] = useState<string[]>([]);
+  const [, setAvailableTopics] = useState<string[]>([]);
   const [topicInput, setTopicInput] = useState("");
   const [selectedQuestions, setSelectedQuestions] = useState<Set<string>>(
     new Set(),
@@ -55,17 +39,17 @@ export default function QuestionsPage() {
   useEffect(() => {
     const loadQuestions = () => {
       const exams = JSON.parse(localStorage.getItem("exams") ?? "[]") as Exam[];
-      const allQuestions: Question[] = [];
 
-      exams.forEach((exam) => {
-        exam.questions.forEach((question) => {
-          allQuestions.push({
-            ...question,
-            examId: exam.id,
-            examTitle: exam.title,
-          });
-        });
-      });
+      const allQuestions = exams.flatMap((exam) =>
+        exam.questions.map(
+          (q) =>
+            ({
+              ...q,
+              examId: exam.id,
+              examTitle: exam.title,
+            }) as QuestionWithExamInfo,
+        ),
+      );
 
       setQuestions(allQuestions);
 
@@ -356,9 +340,9 @@ export default function QuestionsPage() {
                         <div
                           key={index}
                           className={`rounded p-2 ${
-                            (question.correctAnswer as string[])?.includes(
-                              option.text,
-                            )
+                            (
+                              question.correctAnswer ?? ([] as string[])
+                            )?.includes(option.text)
                               ? "bg-green-100 dark:bg-green-900"
                               : "bg-gray-100 dark:bg-gray-800"
                           }`}
