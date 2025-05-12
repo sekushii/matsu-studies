@@ -56,14 +56,29 @@ export function TopicManager({
             ))}
           </div>
         )}
-        <Input
-          value={topicInput}
-          onChange={(e) => setTopicInput(e.target.value)}
-          onKeyDown={handleAddTopic}
-          placeholder={placeholder}
-          className="w-full"
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            value={topicInput}
+            onChange={(e) => setTopicInput(e.target.value)}
+            onKeyDown={handleAddTopic}
+            placeholder={placeholder}
+            className="w-full"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              if (topicInput.trim() && !topics.includes(topicInput.trim())) {
+                onAddTopic(topicInput.trim());
+                setTopicInput("");
+              }
+            }}
+            disabled={!topicInput.trim() || topics.includes(topicInput.trim())} // Disable button if input is empty or topic already exists
+          >
+            Add
+          </Button>
+        </div>
       </div>
     </div>
   );
-} 
+}

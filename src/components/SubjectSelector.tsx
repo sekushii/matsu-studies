@@ -93,7 +93,7 @@ export function SubjectSelector({
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Or type a new subject and press Enter"
+              placeholder="Or type a new subject and press add"
               className="w-full"
             />
             <Button
@@ -114,4 +114,4 @@ export function SubjectSelector({
       </div>
     </div>
   );
-} 
+}
