@@ -50,7 +50,7 @@ export function ImageUpload({
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      onChange(reader.result as string);
+      onChange(reader.result as string); // Ensure the image preview is updated
     };
     reader.readAsDataURL(file);
   };
@@ -59,16 +59,19 @@ export function ImageUpload({
     onChange(null);
   };
 
-  const aspectRatioClass = aspectRatio === "square" ? "aspect-square" : "aspect-video";
+  const aspectRatioClass =
+    aspectRatio === "square" ? "aspect-square" : "aspect-video";
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <div className={`relative overflow-hidden rounded-md border ${aspectRatioClass} ${previewClassName}`}>
+      <div
+        className={`relative overflow-hidden rounded-md border ${aspectRatioClass} ${previewClassName}`}
+      >
         {value ? (
           <>
             <Image
               src={value}
-              alt="Uploaded image"
+              alt="Uploaded image preview"
               fill
               className="object-contain"
             />
@@ -92,7 +95,10 @@ export function ImageUpload({
             htmlFor={id}
             className="flex h-full w-full cursor-pointer items-center justify-center"
           >
-            <Upload className="h-8 w-8 text-muted-foreground" onClick={(e) => e.stopPropagation()} />
+            <Upload
+              className="h-8 w-8 text-muted-foreground"
+              onClick={(e) => e.stopPropagation()}
+            />
             <input
               id={id}
               type="file"
@@ -111,11 +117,13 @@ export function ImageUpload({
             className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed p-2 hover:bg-muted"
           >
             <Upload className="h-4 w-4" />
-            <span>{uploadButtonText} (max {maxSize}MB)</span>
+            <span>
+              {uploadButtonText} (max {maxSize}MB)
+            </span>
           </Label>
         </div>
       )}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
-} 
+}
