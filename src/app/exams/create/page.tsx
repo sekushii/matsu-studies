@@ -13,15 +13,13 @@ export default function CreateExamPage() {
   };
 
   return (
-    <div className="create-exam-container flex min-h-screen flex-col items-center">
-      <h1 className="text-3xl font-bold">Create New Exam</h1>
-      <div className="w-full max-w-7xl">
-        <ExamForm
-          submitLabel="Create Exam"
-          onSubmit={handleCreate}
-          cancelLink="/"
-        />
-      </div>
+    <div className="create-exam-container flex min-h-screen flex-col items-center justify-center">
+      <h1 className="pb-6 pt-6 text-3xl font-bold">Create New Exam</h1>
+      <ExamForm
+        submitLabel="Create Exam"
+        onSubmit={handleCreate}
+        cancelLink="/"
+      />
     </div>
   );
 }
