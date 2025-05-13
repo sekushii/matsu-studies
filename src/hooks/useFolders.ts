@@ -31,11 +31,34 @@ export function useFolders() {
 
   const updateFolderIcon = (folderId: string, icon: string | null) => {
     const updatedFolders = folders.map((folder) =>
-      folder.id === folderId ? { ...folder, icon } as Folder : folder
+      folder.id === folderId ? ({ ...folder, icon } as Folder) : folder,
     );
     setFolders(updatedFolders);
     localStorage.setItem("folders", JSON.stringify(updatedFolders));
   };
 
-  return { folders, createFolder, deleteFolder, updateFolderIcon };
-} 
+  const renameFolder = (folderId: string, newName: string) => {
+    const updated = folders.map((f) =>
+      f.id === folderId ? { ...f, name: newName } : f,
+    );
+    setFolders(updated);
+    localStorage.setItem("folders", JSON.stringify(updated));
+  };
+
+  const updateFolderSubject = (folderId: string, subject: string) => {
+    setFolders((fs) =>
+      fs.map((f) =>
+        f.id === folderId ? { ...f, subject: subject || undefined } : f,
+      ),
+    );
+  };
+
+  return {
+    folders,
+    createFolder,
+    deleteFolder,
+    updateFolderIcon,
+    renameFolder,
+    updateFolderSubject,
+  };
+}

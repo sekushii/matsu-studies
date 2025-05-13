@@ -1,7 +1,17 @@
 import { Card, CardHeader, CardContent } from "~/components/ui/card";
 import { Button } from "~/components/ui/button";
 import Link from "next/link";
-import { Trash2, X, BookOpen, CheckCircle2, Play, Eye, Pencil, Clock, FileText } from "lucide-react";
+import {
+  Trash2,
+  X,
+  BookOpen,
+  CheckCircle2,
+  Play,
+  Eye,
+  Pencil,
+  Clock,
+  FileText,
+} from "lucide-react";
 import Image from "next/image";
 import type { Exam } from "~/types";
 
@@ -26,7 +36,19 @@ export function ExamCard({
       draggable={draggable}
       onDragStart={onDragStart}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="relative pb-3">
+        <div className="absolute right-2 top-2">
+          {onRemoveFromFolder && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6 text-red-500 hover:bg-red-100"
+              onClick={() => onRemoveFromFolder(exam.id)}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          )}
+        </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             {exam.icon ? (
@@ -79,16 +101,6 @@ export function ExamCard({
             >
               <Trash2 className="h-4 w-4" />
             </Button>
-            {onRemoveFromFolder && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => onRemoveFromFolder(exam.id)}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
           </div>
         </div>
       </CardHeader>
@@ -106,4 +118,4 @@ export function ExamCard({
       </CardContent>
     </Card>
   );
-} 
+}
