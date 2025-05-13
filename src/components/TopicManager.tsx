@@ -18,7 +18,7 @@ export function TopicManager({
   topics,
   onAddTopic,
   onRemoveTopic,
-  topicLimit = Infinity,
+  topicLimit = 80,
   label = "Topics",
   placeholder = "Type a topic and press Enter",
 }: TopicManagerProps) {
