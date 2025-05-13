@@ -7,10 +7,9 @@ import React from "react";
 interface FoldersListProps {
   folders: Folder[];
   exams: Exam[];
-  selectedFolder: Folder | null;
   setSelectedFolder: (folder: Folder | null) => void;
   deleteFolder: (folderId: string) => void;
-  handleDragOver: (e: React.DragEvent) => void;
+  handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   handleDrop: (folderId: string) => void;
   updateFolderIcon: (folderId: string, icon: string | null) => void;
 }
@@ -26,41 +25,96 @@ export function FoldersList({
 }: FoldersListProps) {
   return (
     <div className="space-y-4">
-      {folders.map((folder) => (
-        <div
-          key={folder.id}
-          className="relative cursor-pointer rounded-lg border p-4"
-          onDragOver={handleDragOver}
-          onDrop={() => handleDrop(folder.id)}
-          onClick={() => setSelectedFolder(folder)}
-        >
-          <div className="absolute right-2 top-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteFolder(folder.id);
+      {folders.map((folder) => {
+        const examCount = exams.filter((e) => e.folderId === folder.id).length;
+        return (
+          <div
+            key={folder.id}
+            className="relative cursor-pointer rounded-lg border p-4"
+            onDragOver={(e: React.DragEvent<HTMLDivElement>) =>
+              handleDragOver(e)
+            }
+            onDrop={() => handleDrop(folder.id)}
+            onClick={() => {
+              if (examCount > 0) {
+                setSelectedFolder(folder);
+              } else {
+                alert("This folder is empty. Add an exam to access it.");
+              }
+            }}
+          >
+            {/* Folder delete button */}
+            <div className="absolute right-2 top-2 z-20">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-full bg-white p-0 shadow"
+                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                  e.stopPropagation();
+                  deleteFolder(folder.id);
+                }}
+              >
+                <Trash2 className="h-5 w-5 text-red-600" />
+              </Button>
+            </div>
+
+            <div className="mb-1 text-center font-medium">{folder.name}</div>
+            {folder.subject && (
+              <div className="mb-2 text-center text-sm italic text-muted-foreground">
+                {folder.subject}
+              </div>
+            )}
+
+            <div
+              className="relative aspect-square w-full overflow-hidden rounded-md bg-cover bg-center"
+              style={{
+                backgroundImage: folder.icon ? `url(${folder.icon})` : "none",
+              }}
+              onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+                if (!folder.icon) {
+                  e.stopPropagation();
+                }
               }}
             >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+              {!folder.icon ? (
+                <ImageUpload
+                  id={`folder-icon-${folder.id}`}
+                  value={folder.icon ?? null}
+                  onChange={(icon: string | null) =>
+                    updateFolderIcon(folder.id, icon)
+                  }
+                  uploadButtonText="Upload Icon"
+                  className="absolute inset-0 h-full w-full cursor-pointer"
+                />
+              ) : (
+                <div className="absolute bottom-2 right-2 z-30">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full bg-white p-1 shadow"
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                      e.stopPropagation();
+                      updateFolderIcon(folder.id, null);
+                    }}
+                  >
+                    <Trash2 className="h-5 w-5 text-red-600" />
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-2 text-center text-sm text-muted-foreground">
+              {examCount} exam{examCount !== 1 && "s"}
+            </div>
+
+            {examCount === 0 && (
+              <div className="mt-1 text-center text-xs text-muted-foreground">
+                Drag and drop an exam here to be able to access the folder
+              </div>
+            )}
           </div>
-          <div className="mb-2 text-center font-medium">{folder.name}</div>
-          <div className="relative aspect-square w-full overflow-hidden rounded-md" onClick={(e) => e.stopPropagation()}>
-            <ImageUpload
-              id={`folder-icon-${folder.id}`}
-              value={folder.icon}
-              onChange={(icon) => updateFolderIcon(folder.id, icon)}
-              uploadButtonText="Upload folder icon"
-            />
-          </div>
-          <div className="mt-2 text-center text-sm text-muted-foreground">
-            {exams.filter((exam) => exam.folderId === folder.id).length} exams
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
-} 
+}
