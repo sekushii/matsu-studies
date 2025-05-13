@@ -40,6 +40,7 @@ export interface Folder {
   name: string;
   icon?: string; // Base64 image data
   exams: string[]; // Array of exam IDs
+  subject?: string;
 }
 
 // Exam History Types
@@ -94,6 +95,7 @@ export interface SubjectSelectorProps {
   onSubjectSelect: (subject: string) => void;
   onSubjectRemove: (subject: string) => void;
   onNewSubject: (subject: string) => void;
+  subjectLimit: number;
 }
 
 // Utility Types

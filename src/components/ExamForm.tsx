@@ -47,6 +47,9 @@ export const ExamForm: React.FC<ExamFormProps> = ({
   const [timeLimit, setTimeLimit] = useState(
     (initialExam?.timeLimit ?? 30).toString(),
   );
+  const maxQuestions = 100;
+  const maxOptions = 30;
+
   const [icon, setIcon] = useState<string>(initialExam?.icon ?? "");
   const [subject, setSubject] = useState(initialExam?.subject ?? "");
   const [topics, setTopics] = useState<string[]>(initialExam?.topics ?? []);
@@ -74,6 +77,7 @@ export const ExamForm: React.FC<ExamFormProps> = ({
 
   // Question handlers (add, remove, update)
   const addQuestion = () => {
+    if (questions.length >= maxQuestions) return;
     setQuestions((prev) => [
       ...prev,
       {
@@ -121,12 +125,12 @@ export const ExamForm: React.FC<ExamFormProps> = ({
     setQuestions((prev) => {
       const qs = [...prev];
       if (!qs[qIndex]) return prev;
+      const currentOptions = qs[qIndex].options ?? [];
+      if (currentOptions.length >= maxOptions) return prev;
+
       qs[qIndex] = {
         ...qs[qIndex],
-        options: [
-          ...(qs[qIndex].options ?? []),
-          { text: "", image: undefined },
-        ],
+        options: [...currentOptions, { text: "", image: undefined }],
       };
       return qs;
     });
@@ -188,22 +192,31 @@ export const ExamForm: React.FC<ExamFormProps> = ({
               uploadButtonText="Upload exam icon"
             />
           </div>
-          <div className="grid gap-2">
+          <div className="relative grid gap-2">
             <Label htmlFor="title">Title</Label>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              required
+              maxLength={100}
+              className="pr-16"
             />
+            <span className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+              {title.length}/100
+            </span>
           </div>
-          <div className="grid gap-2">
+          <div className="relative grid gap-2">
             <Label htmlFor="description">Description</Label>
             <Textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              maxLength={500}
+              className="pr-16"
             />
+            <span className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+              {description.length}/500
+            </span>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="timeLimit">Time Limit (min)</Label>
@@ -222,11 +235,13 @@ export const ExamForm: React.FC<ExamFormProps> = ({
             onSubjectSelect={setSubject}
             onSubjectRemove={removeSubject}
             onNewSubject={addSubject}
+            subjectLimit={4}
           />
           <TopicManager
             topics={topics}
             onAddTopic={handleAddTopic}
             onRemoveTopic={handleRemoveTopic}
+            topicLimit={10}
           />
         </CardContent>
       </Card>
@@ -274,14 +289,19 @@ export const ExamForm: React.FC<ExamFormProps> = ({
                 </Select>
               </div>
               {/* Question Text & Image */}
-              <div className="space-y-2">
+              <div className="relative space-y-2">
                 <Label>Question Text</Label>
                 <Textarea
                   value={q.question}
                   onChange={(e) =>
                     updateQuestion(idx, "question", e.target.value)
                   }
+                  maxLength={500}
+                  className="pr-16"
                 />
+                <span className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+                  {q.question.length}/500
+                </span>
               </div>
               <div className="space-y-2">
                 <Label>Question Image</Label>
@@ -309,18 +329,24 @@ export const ExamForm: React.FC<ExamFormProps> = ({
                         >
                           Option {oIdx + 1}
                         </Label>
-                        <Textarea
-                          id={`option-text-${q.id}-${oIdx}`}
-                          value={opt.text}
-                          onChange={(e) => {
-                            const newOpts = [...(q.options ?? [])];
-                            if (!newOpts[oIdx]) return;
-                            newOpts[oIdx].text = e.target.value;
-                            updateQuestion(idx, "options", newOpts);
-                          }}
-                          placeholder="Enter option text"
-                          className="option-textbox h-24 w-full resize-none overflow-auto"
-                        />
+                        <div className="relative w-full">
+                          <Textarea
+                            id={`option-text-${q.id}-${oIdx}`}
+                            value={opt.text}
+                            onChange={(e) => {
+                              const newOpts = [...(q.options ?? [])];
+                              if (!newOpts[oIdx]) return;
+                              newOpts[oIdx].text = e.target.value;
+                              updateQuestion(idx, "options", newOpts);
+                            }}
+                            placeholder="Enter option text"
+                            maxLength={300}
+                            className="option-textbox h-24 w-full resize-none overflow-auto pr-16"
+                          />
+                          <span className="absolute bottom-2 right-2 text-xs text-muted-foreground">
+                            {opt.text.length}/300
+                          </span>
+                        </div>
                         <div className="image-upload-container relative flex flex-col items-center gap-2">
                           <div
                             className="image-upload-box relative flex h-24 w-24 items-center justify-center overflow-hidden rounded-md border"
@@ -378,10 +404,16 @@ export const ExamForm: React.FC<ExamFormProps> = ({
                       variant="outline"
                       onClick={() => addOption(idx)}
                       className="self-center rounded-md border border-gray-300"
+                      disabled={q.options.length >= maxOptions}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" /> Add Option
                     </Button>
                   </div>
+                  {q.options.length >= maxOptions && (
+                    <p className="text-center text-xs text-red-500">
+                      Maximum of {maxOptions} options reached
+                    </p>
+                  )}
                   {q.type === "multiple-choice" && (
                     <div className="space-y-2">
                       <Label>Correct Answer</Label>
@@ -432,11 +464,20 @@ export const ExamForm: React.FC<ExamFormProps> = ({
             </CardContent>
           </Card>
         ))}
-        <Button type="button" variant="outline" onClick={addQuestion}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={addQuestion}
+          disabled={questions.length >= maxQuestions}
+        >
           <PlusCircle className="mr-2 h-4 w-4" /> Add Question
         </Button>
       </div>
-
+      {questions.length >= maxQuestions && (
+        <p className="text-center text-xs text-red-500">
+          Maximum of {maxQuestions} questions reached
+        </p>
+      )}
       {/* Actions */}
       <div className="action-buttons-container fixed bottom-4 right-4 z-50 flex gap-4">
         <Link href={cancelLink}>

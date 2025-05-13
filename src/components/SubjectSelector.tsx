@@ -11,6 +11,7 @@ export function SubjectSelector({
   onSubjectSelect,
   onSubjectRemove,
   onNewSubject,
+  subjectLimit,
 }: SubjectSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
@@ -18,8 +19,10 @@ export function SubjectSelector({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter" && input && !availableSubjects.includes(input)) {
       e.preventDefault();
-      onNewSubject(input);
-      setInput("");
+      if (availableSubjects.length < subjectLimit) {
+        onNewSubject(input);
+        setInput("");
+      }
     }
   };
 
@@ -56,35 +59,43 @@ export function SubjectSelector({
             </Button>
             {isOpen && (
               <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
-                {availableSubjects.map((subj) => (
-                  <div
-                    key={subj}
-                    className="flex items-center justify-between px-2 py-1.5 hover:bg-accent"
-                  >
-                    <button
-                      type="button"
-                      className="flex-1 text-left"
-                      onClick={() => {
-                        onSubjectSelect(subj);
-                        setIsOpen(false);
-                      }}
-                    >
-                      {subj}
-                    </button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onSubjectRemove(subj);
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+                {/* Check if there are no subjects */}
+                {availableSubjects.length === 0 ? (
+                  <div className="px-2 py-1.5 text-center text-sm text-gray-500">
+                    No subjects available
                   </div>
-                ))}
+                ) : (
+                  availableSubjects.map((subj) => (
+                    <div
+                      key={subj}
+                      className="flex items-center justify-between px-2 py-1.5 hover:bg-accent"
+                    >
+                      <button
+                        type="button"
+                        className="flex-1 text-left"
+                        onClick={() => {
+                          onSubjectSelect(subj);
+                          setIsOpen(false);
+                        }}
+                      >
+                        {subj}
+                      </button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onSubjectRemove(subj);
+                          onSubjectSelect("");
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
@@ -100,16 +111,26 @@ export function SubjectSelector({
               type="button"
               variant="outline"
               onClick={() => {
-                if (input && !availableSubjects.includes(input)) {
+                if (
+                  input &&
+                  !availableSubjects.includes(input) &&
+                  availableSubjects.length < subjectLimit
+                ) {
                   onNewSubject(input);
                   setInput("");
                 }
               }}
-              disabled={!input}
+              disabled={!input || availableSubjects.length >= subjectLimit}
             >
               Add
             </Button>
           </div>
+          {/* Display a message when the subject limit is reached */}
+          {availableSubjects.length >= subjectLimit && (
+            <p className="text-center text-xs text-red-500">
+              You have reached the maximum number of subjects.
+            </p>
+          )}
         </div>
       </div>
     </div>

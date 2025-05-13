@@ -423,7 +423,15 @@ export function useExam({
 
       setCurrentQuestionIndex(currentQuestionIndex);
     },
-    [currentQuestionIndex, examId, setCurrentQuestionIndex],
+    [
+      currentQuestionIndex,
+      examId,
+      setCurrentQuestionIndex,
+      setAnswers,
+      setCompletedQuestions,
+      setSelectedAnswers,
+      setExam,
+    ],
   );
 
   return {
