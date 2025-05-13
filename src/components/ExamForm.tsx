@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "~/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
@@ -38,6 +38,17 @@ export const ExamForm: React.FC<ExamFormProps> = ({
 }) => {
   const router = useRouter();
   const { availableSubjects, addSubject, removeSubject } = useSubjects();
+  const questionsEndRef = useRef<HTMLDivElement | null>(null); // Ref for scrolling to the last question
+
+  const scrollToQuestion = (questionId: string) => {
+    const questionElement = document.getElementById(`question-${questionId}`);
+    if (questionElement) {
+      questionElement.scrollIntoView({ behavior: "smooth", block: "center" });
+      console.log("Scrolling to question with ID:", questionId);
+    } else {
+      console.warn("Element not found for question ID:", questionId);
+    }
+  };
 
   // Initialize state with initialExam or defaults
   const [title, setTitle] = useState(initialExam?.title ?? "");
@@ -52,10 +63,13 @@ export const ExamForm: React.FC<ExamFormProps> = ({
   const [topics, setTopics] = useState<string[]>(initialExam?.topics ?? []);
   const [questions, setQuestions] = useState<Question[]>(
     initialExam?.questions?.length
-      ? initialExam.questions
+      ? initialExam.questions.map((q, idx) => ({
+          ...q,
+          id: q.id || `question-${idx + 1}`, // Ensure the first question has a valid id
+        }))
       : [
           {
-            id: crypto.randomUUID(),
+            id: "question-1", // Explicitly set the id for the first question
             type: "multiple-choice",
             question: "",
             options: [{ text: "", image: undefined }],
@@ -74,16 +88,20 @@ export const ExamForm: React.FC<ExamFormProps> = ({
 
   // Question handlers (add, remove, update)
   const addQuestion = () => {
-    setQuestions((prev) => [
-      ...prev,
-      {
+    setQuestions((prev) => {
+      const newQuestion = {
         id: crypto.randomUUID(),
-        type: "multiple-choice",
+        type: "multiple-choice" as QuestionType,
         question: "",
         options: [{ text: "", image: undefined }],
         correctAnswer: "",
-      },
-    ]);
+      };
+      const newQuestions = [...prev, newQuestion];
+      setTimeout(() => {
+        setTimeout(() => scrollToQuestion(newQuestion.id), 0); // Ensure DOM updates before scrolling
+      }, 100);
+      return newQuestions;
+    });
   };
 
   const removeQuestion = (index: number) => {
@@ -235,7 +253,7 @@ export const ExamForm: React.FC<ExamFormProps> = ({
       <div className="questions-section w-full max-w-7xl space-y-4 pb-6">
         <h2 className="text-xl font-bold">Questions</h2>
         {questions.map((q, idx) => (
-          <Card key={q.id} className="space-y-1">
+          <Card key={q.id} id={`question-${q.id}`} className="space-y-1">
             <CardHeader className="flex items-center justify-between">
               <CardTitle>Question {idx + 1}</CardTitle>
               <div className="pt-3">
@@ -266,9 +284,9 @@ export const ExamForm: React.FC<ExamFormProps> = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="multiple-choice">
-                      Multiple Choice
+                      Single Answer
                     </SelectItem>
-                    <SelectItem value="checkbox">Checkbox</SelectItem>
+                    <SelectItem value="checkbox">Checkboxes</SelectItem>
                     <SelectItem value="text">Text</SelectItem>
                   </SelectContent>
                 </Select>
@@ -435,6 +453,42 @@ export const ExamForm: React.FC<ExamFormProps> = ({
         <Button type="button" variant="outline" onClick={addQuestion}>
           <PlusCircle className="mr-2 h-4 w-4" /> Add Question
         </Button>
+        <div ref={questionsEndRef} /> {/* Reference for scrolling */}
+      </div>
+
+      {/* Navigator Dropdown */}
+      <div className="fixed bottom-4 left-4 z-50 flex flex-col gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+        >
+          Go to Top
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() =>
+            window.scrollTo({
+              top: document.body.scrollHeight,
+              behavior: "smooth",
+            })
+          }
+        >
+          Go to Bottom
+        </Button>
+        <Select onValueChange={(val) => scrollToQuestion(val)}>
+          <SelectTrigger>
+            <SelectValue placeholder="Go to Question" />
+          </SelectTrigger>
+          <SelectContent>
+            {questions.map((q, idx) => (
+              <SelectItem key={q.id} value={q.id}>
+                Question {idx + 1}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Actions */}
