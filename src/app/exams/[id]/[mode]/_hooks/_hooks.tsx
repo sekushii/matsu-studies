@@ -202,12 +202,12 @@ export function useExam({
   }, [examId]);
 
   const isAnswerCorrect = useCallback(
-    (questionId: string) => {
+    (questionId: string, currentValue?: string | string[]) => {
       if (!exam) return false;
       const question = exam.questions.find((q) => q.id === questionId);
       if (!question) return false;
 
-      const userAnswer = answers[questionId];
+      const userAnswer = currentValue ?? answers[questionId];
       if (!userAnswer) return false;
 
       if (question.type === "multiple-choice") {
@@ -245,7 +245,7 @@ export function useExam({
 
       updateAnswer(questionId, value);
 
-      if (mode === "review" && isAnswerCorrect(questionId)) {
+      if (mode === "review" && isAnswerCorrect(questionId, value)) {
         setCompletedQuestions((prev) => new Set([...prev, questionId]));
       }
     },
