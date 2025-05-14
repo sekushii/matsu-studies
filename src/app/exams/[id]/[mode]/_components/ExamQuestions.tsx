@@ -52,7 +52,7 @@ function QuestionOption({
   questionId,
   isCorrect,
   isSelected,
-  //   isIncorrect,
+  isIncorrect,
   showFeedback,
   onSelect,
   disabled,
@@ -67,16 +67,22 @@ function QuestionOption({
   return (
     <div
       key={`${questionId}-option-${optionIndex}`}
-      className={`flex items-center space-x-4 rounded-md p-3 ${backgroundColor}`}
+      className={`flex items-center space-x-4 rounded-md p-3 ${
+        isCorrect
+          ? "bg-green-100"
+          : isIncorrect
+            ? "bg-orange-100"
+            : backgroundColor
+      }`}
     >
       {inputType === "radio" ? (
         <RadioGroupItem
           value={optionText}
           id={`${questionId}-option-${optionIndex}`}
           className={`${
-            showFeedback && isCorrect
+            isCorrect
               ? "border-green-500 data-[state=checked]:bg-green-500 data-[state=checked]:text-white"
-              : showFeedback
+              : isIncorrect
                 ? "border-orange-500"
                 : ""
           }`}
@@ -88,9 +94,9 @@ function QuestionOption({
           onCheckedChange={onSelect}
           disabled={disabled}
           className={`${
-            showFeedback && isCorrect
+            isCorrect
               ? "border-green-500 data-[state=checked]:bg-green-500 data-[state=checked]:text-white"
-              : showFeedback
+              : isIncorrect
                 ? "border-orange-500"
                 : ""
           }`}

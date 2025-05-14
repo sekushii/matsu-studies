@@ -4,6 +4,7 @@ import type {
   ExamAttempt,
   ExamHistory,
   ExamSummary,
+  Question,
   QuestionStats,
 } from "~/types";
 
@@ -161,6 +162,33 @@ export function getOptionBackgroundColor(
   return isCorrect ? "bg-green-100" : "bg-orange-100";
 }
 
+const updateExamAnswers = (
+  q: Question,
+  questionId: string,
+  value: string | string[],
+  isAnswerCorrect: (
+    questionId: string,
+    currentValue?: string | string[],
+  ) => boolean,
+) => {
+  if (q.id === questionId) {
+    const isCorrect = isAnswerCorrect(questionId, value);
+    const currentValue = Array.isArray(value) ? value : [value];
+    const incorrectAnswers = isCorrect
+      ? (q.incorrectAnswers ?? []).filter((a) => !currentValue.includes(a))
+      : [...new Set([...(q.incorrectAnswers ?? []), ...currentValue])];
+    const correctAnswers = isCorrect
+      ? [...new Set([...(q.correctAnswers ?? []), ...currentValue])]
+      : (q.correctAnswers ?? []).filter((a) => !currentValue.includes(a));
+    return {
+      ...q,
+      incorrectAnswers,
+      correctAnswers,
+    };
+  }
+  return q;
+};
+
 // Main hook that combines all the functionality
 export function useExam({
   examId,
@@ -248,6 +276,33 @@ export function useExam({
       if (mode === "review" && isAnswerCorrect(questionId, value)) {
         setCompletedQuestions((prev) => new Set([...prev, questionId]));
       }
+
+      // Update answers in storage
+      const exams = storage.getExams();
+      const updatedExams = exams.map((e) => {
+        if (e.id === examId) {
+          const updatedQuestions = e.questions.map((q) =>
+            updateExamAnswers(q, questionId, value, isAnswerCorrect),
+          );
+          return {
+            ...e,
+            questions: updatedQuestions,
+          };
+        }
+        return e;
+      });
+      storage.saveExams(updatedExams);
+
+      // Update exam state
+      setExam((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          questions: prev.questions.map((q) =>
+            updateExamAnswers(q, questionId, value, isAnswerCorrect),
+          ),
+        };
+      });
     },
     [
       exam,
@@ -256,6 +311,8 @@ export function useExam({
       updateAnswer,
       isAnswerCorrect,
       setCompletedQuestions,
+      examId,
+      setExam,
     ],
   );
 
