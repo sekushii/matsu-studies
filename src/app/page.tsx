@@ -24,7 +24,6 @@ export default function ExamListPage() {
 
   const {
     filteredExams,
-    availableSubjects,
     availableTopics,
     selectedSubject,
     setSelectedSubject,
@@ -38,7 +37,7 @@ export default function ExamListPage() {
   const [draggedExamId, setDraggedExamId] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const selectedFolder = folders.find((f) => f.id === selectedFolderId) ?? null;
-  const { addSubject, removeSubject } = useSubjects();
+  const { availableSubjects, addSubject, removeSubject } = useSubjects();
 
   const handleDragStart = (examId: string) => setDraggedExamId(examId);
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) =>

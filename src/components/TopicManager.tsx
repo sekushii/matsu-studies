@@ -1,4 +1,5 @@
-import { useState } from "react";
+import type { ChangeEvent, KeyboardEvent, MouseEvent } from "react";
+import React, { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -8,6 +9,7 @@ interface TopicManagerProps {
   topics: string[];
   onAddTopic: (topic: string) => void;
   onRemoveTopic: (topic: string) => void;
+  topicLimit?: number; // New optional limit prop
   label?: string;
   placeholder?: string;
 }
@@ -16,17 +18,32 @@ export function TopicManager({
   topics,
   onAddTopic,
   onRemoveTopic,
+  topicLimit = 80,
   label = "Topics",
   placeholder = "Type a topic and press Enter",
 }: TopicManagerProps) {
   const [topicInput, setTopicInput] = useState("");
 
-  const handleAddTopic = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && topicInput.trim()) {
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
       e.preventDefault();
-      if (!topics.includes(topicInput.trim())) {
-        onAddTopic(topicInput.trim());
+      const trimmed = topicInput.trim();
+      if (trimmed && !topics.includes(trimmed) && topics.length < topicLimit) {
+        onAddTopic(trimmed);
       }
+      setTopicInput("");
+    }
+  };
+
+  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setTopicInput(e.currentTarget.value);
+  };
+
+  const handleAddClick = (e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    const trimmed = topicInput.trim();
+    if (trimmed && !topics.includes(trimmed) && topics.length < topicLimit) {
+      onAddTopic(trimmed);
       setTopicInput("");
     }
   };
@@ -59,25 +76,29 @@ export function TopicManager({
         <div className="flex items-center gap-2">
           <Input
             value={topicInput}
-            onChange={(e) => setTopicInput(e.target.value)}
-            onKeyDown={handleAddTopic}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
             placeholder={placeholder}
             className="w-full"
           />
           <Button
             type="button"
             variant="outline"
-            onClick={() => {
-              if (topicInput.trim() && !topics.includes(topicInput.trim())) {
-                onAddTopic(topicInput.trim());
-                setTopicInput("");
-              }
-            }}
-            disabled={!topicInput.trim() || topics.includes(topicInput.trim())} // Disable button if input is empty or topic already exists
+            onClick={handleAddClick}
+            disabled={
+              !topicInput.trim() ||
+              topics.includes(topicInput.trim()) ||
+              topics.length >= topicLimit
+            }
           >
             Add
           </Button>
         </div>
+        {topics.length >= topicLimit && (
+          <p className="text-center text-xs text-red-500">
+            Maximum of {topicLimit} topics reached.
+          </p>
+        )}
       </div>
     </div>
   );
