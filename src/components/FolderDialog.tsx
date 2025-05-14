@@ -90,6 +90,7 @@ export function FolderDialog({
                 onSubjectSelect={(subj) => onSubjectSelect(folder.id, subj)}
                 onSubjectRemove={onSubjectRemove}
                 onNewSubject={onNewSubject}
+                subjectLimit={3}
               />
             </div>
           </div>

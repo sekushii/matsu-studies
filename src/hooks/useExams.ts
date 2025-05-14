@@ -3,7 +3,6 @@ import type { Exam } from "~/types";
 
 export function useExamListing() {
   const [exams, setExams] = useState<Exam[]>([]);
-  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [availableTopics, setAvailableTopics] = useState<string[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
@@ -11,7 +10,6 @@ export function useExamListing() {
   useEffect(() => {
     // Load exams from localStorage
     const savedExams = localStorage.getItem("exams");
-    const savedSubjects = localStorage.getItem("exam-subjects");
 
     if (savedExams) {
       const parsedExams = JSON.parse(savedExams) as Exam[];
@@ -23,10 +21,6 @@ export function useExamListing() {
         exam.topics?.forEach((topic) => topics.add(topic));
       });
       setAvailableTopics(Array.from(topics));
-    }
-
-    if (savedSubjects) {
-      setAvailableSubjects(JSON.parse(savedSubjects) as string[]);
     }
   }, []);
 
@@ -68,7 +62,6 @@ export function useExamListing() {
   return {
     exams,
     filteredExams,
-    availableSubjects,
     availableTopics,
     selectedSubject,
     setSelectedSubject,
@@ -78,4 +71,4 @@ export function useExamListing() {
     removeExamFromFolder,
     updateExamFolder,
   };
-} 
+}

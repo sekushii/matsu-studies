@@ -95,6 +95,7 @@ export interface SubjectSelectorProps {
   onSubjectSelect: (subject: string) => void;
   onSubjectRemove: (subject: string) => void;
   onNewSubject: (subject: string) => void;
+  subjectLimit: number;
 }
 
 // Utility Types
