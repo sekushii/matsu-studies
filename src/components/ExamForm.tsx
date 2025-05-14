@@ -490,41 +490,6 @@ export const ExamForm: React.FC<ExamFormProps> = ({
         </Button>
         <div ref={questionsEndRef} /> {/* Reference for scrolling */}
       </div>
-
-      {/* Navigator Dropdown */}
-      <div className="fixed bottom-4 left-4 z-50 flex flex-col gap-2">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-        >
-          Go to Top
-        </Button>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() =>
-            window.scrollTo({
-              top: document.body.scrollHeight,
-              behavior: "smooth",
-            })
-          }
-        >
-          Go to Bottom
-        </Button>
-        <Select onValueChange={(val) => scrollToQuestion(val)}>
-          <SelectTrigger>
-            <SelectValue placeholder="Go to Question" />
-          </SelectTrigger>
-          <SelectContent>
-            {questions.map((q, idx) => (
-              <SelectItem key={q.id} value={q.id}>
-                Question {idx + 1}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
       {questions.length >= maxQuestions && (
         <p className="text-center text-xs text-red-500">
           Maximum of {maxQuestions} questions reached
