@@ -1,5 +1,6 @@
 // Example model schema from the Drizzle docs
 // https://orm.drizzle.team/docs/sql-schema-declaration
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   serial,
@@ -21,7 +22,9 @@ export const users = pgTable("users", {
   iconUrl: text("icon_url"),
   email: varchar("email", { length: 256 }),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => sql`now()`),
 });
 
 export const folders = pgTable(
@@ -36,7 +39,9 @@ export const folders = pgTable(
     name: varchar("name", { length: 100 }).notNull(),
     iconUrl: text("icon_url"),
     createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => sql`now()`),
     deletedAt: timestamp("deleted_at"),
   },
   (t) => [unique().on(t.userId, t.name)],
@@ -47,7 +52,9 @@ export const subjects = pgTable("subjects", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 100 }).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => sql`now()`),
 });
 
 export const topics = pgTable(
@@ -61,7 +68,9 @@ export const topics = pgTable(
         onDelete: "cascade",
       }),
     createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => sql`now()`),
   },
   (t) => [unique().on(t.subjectId, t.name)],
 );
@@ -85,7 +94,9 @@ export const questions = pgTable(
         onDelete: "set null",
       }),
     createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => sql`now()`),
     deletedAt: timestamp("deleted_at"),
   },
   (t) => [
@@ -108,7 +119,9 @@ export const questionOptions = pgTable(
     isCorrect: boolean("is_correct").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => sql`now()`),
   },
   (t) => [index("question_option_idx").on(t.questionId)],
 );
@@ -130,7 +143,9 @@ export const exams = pgTable("exams", {
   timeLimit: integer("time_limit"),
   iconUrl: text("icon_url"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => sql`now()`),
   deletedAt: timestamp("deleted_at"),
 });
 
@@ -146,7 +161,9 @@ export const examQuestions = pgTable(
       .notNull()
       .references(() => questions.id),
     createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => sql`now()`),
     deletedAt: timestamp("deleted_at"),
   },
   (t) => [
@@ -172,7 +189,9 @@ export const studySessions = pgTable(
         onDelete: "cascade",
       }),
     createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => sql`now()`),
     firstSeen: timestamp("first_seen"),
     status: varchar("status", { length: 20 }).notNull().default("unseen"),
   },
@@ -188,7 +207,9 @@ export const studyTips = pgTable("study_tips", {
     }),
   tipText: text("tip_text").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => sql`now()`),
 });
 
 export const studyNotes = pgTable("study_notes", {
@@ -200,7 +221,9 @@ export const studyNotes = pgTable("study_notes", {
     }),
   noteText: text("note_text").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => sql`now()`),
 });
 
 export const studySolutions = pgTable("study_solutions", {
@@ -212,7 +235,9 @@ export const studySolutions = pgTable("study_solutions", {
     }),
   fileUrl: text("file_url").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => sql`now()`),
 });
 
 export const studyAnswers = pgTable(
@@ -232,7 +257,9 @@ export const studyAnswers = pgTable(
     isCorrect: boolean("is_correct").notNull(),
     answeredAt: timestamp("answered_at").defaultNow(),
     createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => sql`now()`),
   },
   (t) => [index("study_session_idx").on(t.studySessionId)],
 );
@@ -260,7 +287,9 @@ export const examAttempts = pgTable(
     correctCount: integer("correct_count"),
     incorrectCount: integer("incorrect_count"),
     createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => sql`now()`),
   },
   (t) => [index("exam_idx").on(t.examId), index("user_idx").on(t.userId)],
 );
@@ -281,7 +310,9 @@ export const attemptQuestions = pgTable(
     answeredAt: timestamp("answered_at"),
     isCorrect: boolean("is_correct"),
     createdAt: timestamp("created_at").defaultNow(),
-    updatedAt: timestamp("updated_at").defaultNow(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => sql`now()`),
   },
   (t) => [index("question_attempt_idx").on(t.questionId)],
 );
@@ -299,7 +330,9 @@ export const attemptAnswers = pgTable("attempt_answers", {
   textAnswer: text("text_answer"),
   selectedAt: timestamp("selected_at"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => sql`now()`),
 });
 
 // SUMMARY
@@ -316,5 +349,7 @@ export const questionStats = pgTable("question_stats", {
   incorrectCount: integer("incorrect_count").notNull().default(0),
   lastAttempted: timestamp("last_attempted"),
   createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => sql`now()`),
 });
