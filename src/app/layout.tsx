@@ -28,16 +28,18 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="en" className={`${geist.variable}`}>
-        <header className="flex h-16 items-center justify-end gap-4 p-4">
-          <SignedOut>
-            <SignInButton />
-            <SignUpButton />
-          </SignedOut>
-          <SignedIn>
-            <UserButton />
-          </SignedIn>
-        </header>
-        <body>{children}</body>
+        <body>
+          <header className="flex h-16 items-center justify-end gap-4 p-4">
+            <SignedOut>
+              <SignInButton />
+              <SignUpButton />
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+          </header>
+          {children}
+        </body>
       </html>
     </ClerkProvider>
   );
