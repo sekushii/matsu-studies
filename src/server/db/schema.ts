@@ -17,7 +17,7 @@ import {
 // USERS & ORGANIZATION
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  externalId: text("external_id").notNull(),
+  externalId: text("external_id").notNull().unique(),
   username: varchar("username", { length: 256 }),
   iconUrl: text("icon_url"),
   email: varchar("email", { length: 256 }),
