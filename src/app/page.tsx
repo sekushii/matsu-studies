@@ -4,52 +4,38 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
 import { PlusCircle, FileText, FolderPlus, HelpCircle } from "lucide-react";
-import { useFolders } from "~/hooks/useFolders";
-import { useExamListing } from "~/hooks/useExams";
+import { Filters } from "~/components/Filters";
 import { FoldersList } from "~/components/FoldersList";
 import { ExamCard } from "~/components/ExamCard";
-import { Filters } from "~/components/Filters";
 import { FolderDialog } from "~/components/FolderDialog";
-import { useSubjects } from "~/hooks/useSubjects";
+import { HomeContextProvider, useExam } from "~/contexts/HomeContext";
+import type { Folder } from "~/types";
 
 export default function ExamListPage() {
-  const {
-    folders,
-    createFolder,
-    deleteFolder,
-    updateFolderIcon,
-    renameFolder,
-    updateFolderSubject,
-  } = useFolders();
+  return (
+    <HomeContextProvider>
+      <Content />
+    </HomeContextProvider>
+  );
+}
 
-  const {
-    filteredExams,
-    availableTopics,
-    selectedSubject,
-    setSelectedSubject,
-    selectedTopics,
-    setSelectedTopics,
-    deleteExam,
-    removeExamFromFolder,
-    updateExamFolder,
-  } = useExamListing();
-
+function Content() {
+  const { createFolder, updateExamFolder, filteredExams, deleteExam } =
+    useExam();
   const [draggedExamId, setDraggedExamId] = useState<string | null>(null);
-  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const selectedFolder = folders.find((f) => f.id === selectedFolderId) ?? null;
-  const { availableSubjects, addSubject, removeSubject } = useSubjects();
+  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
 
-  const handleDragStart = (examId: string) => setDraggedExamId(examId);
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) =>
-    e.preventDefault();
   const handleDrop = (folderId: string) => {
     if (!draggedExamId) return;
     updateExamFolder(draggedExamId, folderId);
     setDraggedExamId(null);
   };
 
+  const unassignedExams = filteredExams.filter((e) => !e.folderId);
+
   return (
     <div className="container mx-auto py-10">
+      {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">My Exams</h1>
@@ -59,25 +45,21 @@ export default function ExamListPage() {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={createFolder}>
-            <FolderPlus className="mr-2 h-4 w-4" />
-            New Folder
+            <FolderPlus className="mr-2 h-4 w-4" /> New Folder
           </Button>
           <Link href="/questions">
             <Button variant="outline">
-              <HelpCircle className="mr-2 h-4 w-4" />
-              Questions
+              <HelpCircle className="mr-2 h-4 w-4" /> Questions
             </Button>
           </Link>
           <Link href="/summary">
             <Button variant="outline">
-              <FileText className="mr-2 h-4 w-4" />
-              Summary
+              <FileText className="mr-2 h-4 w-4" /> Summary
             </Button>
           </Link>
           <Link href="/exams/create">
             <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create Exam
+              <PlusCircle className="mr-2 h-4 w-4" /> Create Exam
             </Button>
           </Link>
         </div>
@@ -87,59 +69,35 @@ export default function ExamListPage() {
         {/* Exams Section */}
         <div className="flex-1">
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredExams
-              .filter((exam) => !exam.folderId)
-              .map((exam) => (
-                <ExamCard
-                  key={exam.id}
-                  exam={exam}
-                  onDelete={deleteExam}
-                  draggable
-                  onDragStart={() => handleDragStart(exam.id)}
-                />
-              ))}
+            {unassignedExams.map((exam) => (
+              <ExamCard
+                key={exam.id}
+                exam={exam}
+                onDelete={deleteExam}
+                draggable
+                onDragStart={() => setDraggedExamId(exam.id)}
+              />
+            ))}
           </div>
         </div>
 
-        {/* Folders Section */}
+        {/* Sidebar: Filters + Folders */}
         <div className="w-64 space-y-4">
-          <Filters
-            selectedSubject={selectedSubject}
-            setSelectedSubject={setSelectedSubject}
-            selectedTopics={selectedTopics}
-            setSelectedTopics={setSelectedTopics}
-            availableSubjects={availableSubjects}
-            availableTopics={availableTopics}
-          />
-
+          <Filters />
           <h2 className="text-xl font-semibold">Folders</h2>
           <FoldersList
-            folders={folders}
-            exams={filteredExams}
-            setSelectedFolder={(folder) =>
-              setSelectedFolderId(folder ? folder.id : null)
-            }
-            deleteFolder={deleteFolder}
-            handleDragOver={handleDragOver}
+            setSelectedFolder={setSelectedFolder}
+            handleDragOver={(e) => e.preventDefault()}
             handleDrop={handleDrop}
-            updateFolderIcon={updateFolderIcon}
           />
         </div>
       </div>
 
-      {/* Folder Content Dialog */}
+      {/* Folder Dialog */}
       {selectedFolder && (
         <FolderDialog
           folder={selectedFolder}
-          exams={filteredExams}
-          onClose={() => setSelectedFolderId(null)}
-          onDeleteExam={deleteExam}
-          onRemoveFromFolder={removeExamFromFolder}
-          onRenameFolder={renameFolder}
-          availableSubjects={availableSubjects}
-          onSubjectSelect={updateFolderSubject}
-          onNewSubject={addSubject}
-          onSubjectRemove={removeSubject}
+          onClose={() => setSelectedFolder(null)}
         />
       )}
     </div>

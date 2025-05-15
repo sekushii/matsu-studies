@@ -1,37 +1,39 @@
 // ~/components/FolderDialog.tsx
 import { Button } from "~/components/ui/button";
 import { X, Edit2, Check, XCircle } from "lucide-react";
-import type { Folder, Exam } from "~/types";
+import type { Folder } from "~/types";
 import { ExamCard } from "./ExamCard";
 import { SubjectSelector } from "./SubjectSelector";
 import React, { useState, useEffect } from "react";
+import { useExam } from "~/contexts/HomeContext";
 
 interface FolderDialogProps {
   folder: Folder;
-  exams: Exam[];
   onClose: () => void;
-  onDeleteExam: (id: string) => void;
-  onRemoveFromFolder: (id: string) => void;
-  onRenameFolder: (id: string, newName: string) => void;
-  availableSubjects: string[];
-  onSubjectSelect: (folderId: string, subject: string) => void;
-  onSubjectRemove: (subject: string) => void;
-  onNewSubject: (subject: string) => void;
 }
 
 export function FolderDialog({
-  folder,
-  exams,
+  folder: initialFolder,
   onClose,
-  onDeleteExam,
-  onRemoveFromFolder,
-  onRenameFolder,
-  availableSubjects,
-  onSubjectSelect,
-  onSubjectRemove,
-  onNewSubject,
 }: FolderDialogProps) {
-  const folderExams = exams.filter((exam) => exam.folderId === folder.id);
+  const {
+    filteredExams,
+    deleteExam,
+    removeExamFromFolder,
+    renameFolder,
+    availableSubjects,
+    updateFolderSubject,
+    removeSubject,
+    addSubject,
+    folders,
+  } = useExam();
+
+  // Get the latest folder data from context
+  const folder =
+    folders.find((f) => f.id === initialFolder.id) ?? initialFolder;
+  const folderExams = filteredExams.filter(
+    (exam) => exam.folderId === folder.id,
+  );
   const [isEditing, setIsEditing] = useState(false);
   const [nameInput, setNameInput] = useState(folder.name);
 
@@ -40,7 +42,7 @@ export function FolderDialog({
   const handleSave = () => {
     const trimmed = nameInput.trim();
     if (trimmed && trimmed !== folder.name) {
-      onRenameFolder(folder.id, trimmed);
+      renameFolder(folder.id, trimmed);
     }
     setIsEditing(false);
   };
@@ -49,7 +51,7 @@ export function FolderDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="w-full max-w-4xl rounded-lg bg-background p-6">
         {/* HEADER */}
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-6 flex items-start justify-between">
           <div className="flex-grow">
             {isEditing ? (
               <div className="flex items-center space-x-2">
@@ -87,9 +89,9 @@ export function FolderDialog({
               <SubjectSelector
                 selectedSubject={folder.subject ?? ""}
                 availableSubjects={availableSubjects}
-                onSubjectSelect={(subj) => onSubjectSelect(folder.id, subj)}
-                onSubjectRemove={onSubjectRemove}
-                onNewSubject={onNewSubject}
+                onSubjectSelect={(subj) => updateFolderSubject(folder.id, subj)}
+                onSubjectRemove={removeSubject}
+                onNewSubject={addSubject}
                 subjectLimit={3}
               />
             </div>
@@ -99,15 +101,14 @@ export function FolderDialog({
           </Button>
         </div>
 
-        {/* EXAMS GRID */}
         {folderExams.length > 0 ? (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-2">
             {folderExams.map((exam) => (
               <ExamCard
                 key={exam.id}
                 exam={exam}
-                onDelete={onDeleteExam}
-                onRemoveFromFolder={() => onRemoveFromFolder(exam.id)}
+                onDelete={deleteExam}
+                onRemoveFromFolder={() => removeExamFromFolder(exam.id)}
               />
             ))}
           </div>
