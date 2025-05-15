@@ -47,7 +47,7 @@ export default function ExamPage() {
       <div className="container mx-auto max-w-7xl px-4 py-10">
         <div className="flex flex-col items-center justify-center gap-4">
           <h1 className="text-2xl font-bold">Exam was not found</h1>
-          <Link href="/">
+          <Link href="/main">
             <Button variant="outline">
               <Home className="mr-2 h-4 w-4" />
               Back to Home
@@ -65,7 +65,7 @@ export default function ExamPage() {
       <div className="container mx-auto max-w-7xl px-4 py-10">
         <div className="flex flex-col items-center justify-center gap-4">
           <h1 className="text-2xl font-bold">Question was not found</h1>
-          <Link href="/">
+          <Link href="/main">
             <Button variant="outline">
               <Home className="mr-2 h-4 w-4" />
               Back to Home

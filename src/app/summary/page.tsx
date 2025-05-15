@@ -146,7 +146,7 @@ export default function SummaryPage() {
             View and analyze your exam performance
           </p>
         </div>
-        <Link href="/">
+        <Link href="/main">
           <Button variant="outline">
             <Home className="mr-2 h-4 w-4" />
             Back to Home

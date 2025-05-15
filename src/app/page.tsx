@@ -1,105 +1,72 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
 import { Button } from "~/components/ui/button";
-import { PlusCircle, FileText, FolderPlus, HelpCircle } from "lucide-react";
-import { Filters } from "~/components/Filters";
-import { FoldersList } from "~/components/FoldersList";
-import { ExamCard } from "~/components/ExamCard";
-import { FolderDialog } from "~/components/FolderDialog";
-import { HomeContextProvider, useExam } from "~/contexts/HomeContext";
-import type { Folder } from "~/types";
+import { BookOpen, FileText, HelpCircle, PlusCircle } from "lucide-react";
+import { useAuth, SignInButton } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-export default function ExamListPage() {
-  return (
-    <HomeContextProvider>
-      <Content />
-    </HomeContextProvider>
-  );
-}
+export default function LandingPage() {
+  const { isSignedIn, isLoaded } = useAuth();
+  const router = useRouter();
 
-function Content() {
-  const { createFolder, updateExamFolder, filteredExams, deleteExam } =
-    useExam();
-  const [draggedExamId, setDraggedExamId] = useState<string | null>(null);
-  const [selectedFolder, setSelectedFolder] = useState<Folder | null>(null);
+  useEffect(() => {
+    if (isLoaded && isSignedIn) {
+      router.push("/main");
+    }
+  }, [isLoaded, isSignedIn, router]);
 
-  const handleDrop = (folderId: string) => {
-    if (!draggedExamId) return;
-    updateExamFolder(draggedExamId, folderId);
-    setDraggedExamId(null);
-  };
-
-  const unassignedExams = filteredExams.filter((e) => !e.folderId);
+  if (!isLoaded) {
+    return null;
+  }
 
   return (
-    <div className="container mx-auto py-10">
-      {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Exams</h1>
-          <p className="mt-1 text-muted-foreground">
-            Manage and take your created exams
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={createFolder}>
-            <FolderPlus className="mr-2 h-4 w-4" /> New Folder
-          </Button>
-          <Link href="/questions">
-            <Button variant="outline">
-              <HelpCircle className="mr-2 h-4 w-4" /> Questions
-            </Button>
-          </Link>
-          <Link href="/summary">
-            <Button variant="outline">
-              <FileText className="mr-2 h-4 w-4" /> Summary
-            </Button>
-          </Link>
-          <Link href="/exams/create">
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" /> Create Exam
-            </Button>
-          </Link>
-        </div>
-      </div>
+    <div className="relative flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center">
+      <div
+        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat opacity-20"
+        style={{ backgroundImage: "url('/assets/Fubuki.png')" }}
+      />
+      <div className="container relative z-10 px-4 py-16 text-center">
+        <h1 className="mb-6 text-5xl font-bold tracking-tight">
+          Welcome to Study
+        </h1>
+        <p className="mb-12 text-xl text-muted-foreground">
+          Your all-in-one platform for creating, managing, and taking exams
+        </p>
 
-      <div className="flex gap-8">
-        {/* Exams Section */}
-        <div className="flex-1">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {unassignedExams.map((exam) => (
-              <ExamCard
-                key={exam.id}
-                exam={exam}
-                onDelete={deleteExam}
-                draggable
-                onDragStart={() => setDraggedExamId(exam.id)}
-              />
-            ))}
+        <div className="mx-auto mb-16 grid max-w-4xl gap-8 md:grid-cols-3">
+          <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+            <BookOpen className="mb-4 h-8 w-8 text-primary" />
+            <h3 className="mb-2 text-lg font-semibold">Create Exams</h3>
+            <p className="text-sm text-muted-foreground">
+              Build custom exams from your question bank
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+            <FileText className="mb-4 h-8 w-8 text-primary" />
+            <h3 className="mb-2 text-lg font-semibold">Organize Content</h3>
+            <p className="text-sm text-muted-foreground">
+              Keep your exams and questions organized in folders
+            </p>
+          </div>
+          <div className="rounded-lg border bg-card p-6 text-card-foreground shadow-sm">
+            <HelpCircle className="mb-4 h-8 w-8 text-primary" />
+            <h3 className="mb-2 text-lg font-semibold">Track Progress</h3>
+            <p className="text-sm text-muted-foreground">
+              Monitor your performance and improve over time
+            </p>
           </div>
         </div>
 
-        {/* Sidebar: Filters + Folders */}
-        <div className="w-64 space-y-4">
-          <Filters />
-          <h2 className="text-xl font-semibold">Folders</h2>
-          <FoldersList
-            setSelectedFolder={setSelectedFolder}
-            handleDragOver={(e) => e.preventDefault()}
-            handleDrop={handleDrop}
-          />
+        <div className="flex justify-center gap-4">
+          <SignInButton mode="modal">
+            <Button size="lg">
+              <PlusCircle className="mr-2 h-5 w-5" />
+              Get Started
+            </Button>
+          </SignInButton>
         </div>
       </div>
-
-      {/* Folder Dialog */}
-      {selectedFolder && (
-        <FolderDialog
-          folder={selectedFolder}
-          onClose={() => setSelectedFolder(null)}
-        />
-      )}
     </div>
   );
 }
