@@ -27,9 +27,11 @@ export const folders = pgTable(
   "folders",
   {
     id: serial("id").primaryKey(),
-    userId: integer("user_id").references(() => users.id, {
-      onDelete: "cascade",
-    }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, {
+        onDelete: "cascade",
+      }),
     name: varchar("name", { length: 100 }).notNull(),
     iconUrl: text("icon_url"),
     createdAt: timestamp("created_at").defaultNow(),
@@ -52,9 +54,11 @@ export const topics = pgTable(
   {
     id: serial("id").primaryKey(),
     name: varchar("name", { length: 100 }).notNull(),
-    subjectId: integer("subject_id").references(() => subjects.id, {
-      onDelete: "cascade",
-    }),
+    subjectId: integer("subject_id")
+      .notNull()
+      .references(() => subjects.id, {
+        onDelete: "cascade",
+      }),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
   },
@@ -69,12 +73,16 @@ export const questions = pgTable(
     type: varchar("type", { length: 20 }).notNull(),
     text: text("text").notNull(),
     imageUrl: text("image_url"),
-    subjectId: integer("subject_id").references(() => subjects.id, {
-      onDelete: "set null",
-    }),
-    topicId: integer("topic_id").references(() => topics.id, {
-      onDelete: "set null",
-    }),
+    subjectId: integer("subject_id")
+      .notNull()
+      .references(() => subjects.id, {
+        onDelete: "set null",
+      }),
+    topicId: integer("topic_id")
+      .notNull()
+      .references(() => topics.id, {
+        onDelete: "set null",
+      }),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
     deletedAt: timestamp("deleted_at"),
@@ -89,9 +97,11 @@ export const questionOptions = pgTable(
   "question_options",
   {
     id: serial("id").primaryKey(),
-    questionId: integer("question_id").references(() => questions.id, {
-      onDelete: "cascade",
-    }),
+    questionId: integer("question_id")
+      .notNull()
+      .references(() => questions.id, {
+        onDelete: "cascade",
+      }),
     text: text("text").notNull(),
     imageUrl: text("image_url"),
     isCorrect: boolean("is_correct").notNull().default(false),
@@ -106,9 +116,11 @@ export const questionOptions = pgTable(
 
 export const exams = pgTable("exams", {
   id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id, {
-    onDelete: "cascade",
-  }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id, {
+      onDelete: "cascade",
+    }),
   folderId: integer("folder_id").references(() => folders.id, {
     onDelete: "set null",
   }),
@@ -148,12 +160,16 @@ export const studySessions = pgTable(
   "study_sessions",
   {
     id: serial("id").primaryKey(),
-    userId: integer("user_id").references(() => users.id, {
-      onDelete: "cascade",
-    }),
-    questionId: integer("question_id").references(() => questions.id, {
-      onDelete: "cascade",
-    }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, {
+        onDelete: "cascade",
+      }),
+    questionId: integer("question_id")
+      .notNull()
+      .references(() => questions.id, {
+        onDelete: "cascade",
+      }),
     createdAt: timestamp("created_at").defaultNow(),
     updatedAt: timestamp("updated_at").defaultNow(),
     firstSeen: timestamp("first_seen"),
@@ -164,9 +180,11 @@ export const studySessions = pgTable(
 
 export const studyTips = pgTable("study_tips", {
   id: serial("id").primaryKey(),
-  questionId: integer("question_id").references(() => questions.id, {
-    onDelete: "cascade",
-  }),
+  questionId: integer("question_id")
+    .notNull()
+    .references(() => questions.id, {
+      onDelete: "cascade",
+    }),
   tipText: text("tip_text").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -174,12 +192,11 @@ export const studyTips = pgTable("study_tips", {
 
 export const studyNotes = pgTable("study_notes", {
   id: serial("id").primaryKey(),
-  studySessionId: integer("study_session_id").references(
-    () => studySessions.id,
-    {
+  studySessionId: integer("study_session_id")
+    .notNull()
+    .references(() => studySessions.id, {
       onDelete: "cascade",
-    },
-  ),
+    }),
   noteText: text("note_text").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -187,12 +204,11 @@ export const studyNotes = pgTable("study_notes", {
 
 export const studySolutions = pgTable("study_solutions", {
   id: serial("id").primaryKey(),
-  studySessionId: integer("study_session_id").references(
-    () => studySessions.id,
-    {
+  studySessionId: integer("study_session_id")
+    .notNull()
+    .references(() => studySessions.id, {
       onDelete: "cascade",
-    },
-  ),
+    }),
   fileUrl: text("file_url").notNull(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -202,15 +218,16 @@ export const studyAnswers = pgTable(
   "study_answers",
   {
     id: serial("id").primaryKey(),
-    studySessionId: integer("study_session_id").references(
-      () => studySessions.id,
-      {
+    studySessionId: integer("study_session_id")
+      .notNull()
+      .references(() => studySessions.id, {
         onDelete: "cascade",
-      },
-    ),
-    optionId: integer("option_id").references(() => questionOptions.id, {
-      onDelete: "cascade",
-    }),
+      }),
+    optionId: integer("option_id")
+      .notNull()
+      .references(() => questionOptions.id, {
+        onDelete: "cascade",
+      }),
     isCorrect: boolean("is_correct").notNull(),
     answeredAt: timestamp("answered_at").defaultNow(),
     createdAt: timestamp("created_at").defaultNow(),
@@ -225,12 +242,16 @@ export const examAttempts = pgTable(
   "exam_attempts",
   {
     id: serial("id").primaryKey(),
-    examId: integer("exam_id").references(() => exams.id, {
-      onDelete: "cascade",
-    }),
-    userId: integer("user_id").references(() => users.id, {
-      onDelete: "cascade",
-    }),
+    examId: integer("exam_id")
+      .notNull()
+      .references(() => exams.id, {
+        onDelete: "cascade",
+      }),
+    userId: integer("user_id")
+      .notNull()
+      .references(() => users.id, {
+        onDelete: "cascade",
+      }),
     startedAt: timestamp("started_at"),
     submittedAt: timestamp("submitted_at"),
     totalTimeSec: integer("total_time_sec"),
