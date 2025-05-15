@@ -9,24 +9,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui/select";
+import { useExam } from "~/contexts/HomeContext";
 
-interface FiltersProps {
-  selectedSubject: string;
-  setSelectedSubject: (subject: string) => void;
-  selectedTopics: string[];
-  setSelectedTopics: (topics: string[]) => void;
-  availableSubjects: string[];
-  availableTopics: string[];
-}
+export function Filters() {
+  const {
+    selectedSubject,
+    setSelectedSubject,
+    selectedTopics,
+    setSelectedTopics,
+    availableSubjects,
+    availableTopics,
+  } = useExam();
 
-export function Filters({
-  selectedSubject,
-  setSelectedSubject,
-  selectedTopics,
-  setSelectedTopics,
-  availableSubjects,
-  availableTopics,
-}: FiltersProps) {
   return (
     <Card className="mb-4">
       <CardHeader className="py-3">
@@ -108,4 +102,4 @@ export function Filters({
       </CardContent>
     </Card>
   );
-} 
+}

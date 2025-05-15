@@ -1,39 +1,34 @@
 import { Button } from "~/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { ImageUpload } from "~/components/ImageUpload";
-import type { Folder, Exam } from "~/types";
+import type { Folder } from "~/types";
 import React from "react";
+import { useExam } from "~/contexts/HomeContext";
 
 interface FoldersListProps {
-  folders: Folder[];
-  exams: Exam[];
   setSelectedFolder: (folder: Folder | null) => void;
-  deleteFolder: (folderId: string) => void;
   handleDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   handleDrop: (folderId: string) => void;
-  updateFolderIcon: (folderId: string, icon: string | null) => void;
 }
 
 export function FoldersList({
-  folders,
-  exams,
   setSelectedFolder,
-  deleteFolder,
   handleDragOver,
   handleDrop,
-  updateFolderIcon,
 }: FoldersListProps) {
+  const { folders, filteredExams, deleteFolder, updateFolderIcon } = useExam();
+
   return (
     <div className="space-y-4">
       {folders.map((folder) => {
-        const examCount = exams.filter((e) => e.folderId === folder.id).length;
+        const examCount = filteredExams.filter(
+          (e) => e.folderId === folder.id,
+        ).length;
         return (
           <div
             key={folder.id}
             className="relative cursor-pointer rounded-lg border p-4"
-            onDragOver={(e: React.DragEvent<HTMLDivElement>) =>
-              handleDragOver(e)
-            }
+            onDragOver={handleDragOver}
             onDrop={() => handleDrop(folder.id)}
             onClick={() => {
               if (examCount > 0) {
