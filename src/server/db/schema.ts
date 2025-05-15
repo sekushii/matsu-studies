@@ -16,9 +16,10 @@ import {
 // USERS & ORGANIZATION
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: varchar("username", { length: 256 }).notNull(),
+  externalId: text("external_id").notNull(),
+  username: varchar("username", { length: 256 }),
   iconUrl: text("icon_url"),
-  email: varchar("email", { length: 256 }).notNull(),
+  email: varchar("email", { length: 256 }),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
