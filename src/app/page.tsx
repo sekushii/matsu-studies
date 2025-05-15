@@ -4,13 +4,11 @@ import { useState } from "react";
 import Link from "next/link";
 import { Button } from "~/components/ui/button";
 import { PlusCircle, FileText, FolderPlus, HelpCircle } from "lucide-react";
-import { useFolders } from "~/hooks/useFolders";
-import { useExamListing } from "~/hooks/useExams";
 import { FoldersList } from "~/components/FoldersList";
 import { ExamCard } from "~/components/ExamCard";
 import { Filters } from "~/components/Filters";
 import { FolderDialog } from "~/components/FolderDialog";
-import { useSubjects } from "~/hooks/useSubjects";
+import { useExam } from "~/contexts/HomeContext";
 
 export default function ExamListPage() {
   const {
@@ -20,9 +18,6 @@ export default function ExamListPage() {
     updateFolderIcon,
     renameFolder,
     updateFolderSubject,
-  } = useFolders();
-
-  const {
     filteredExams,
     availableTopics,
     selectedSubject,
@@ -32,12 +27,14 @@ export default function ExamListPage() {
     deleteExam,
     removeExamFromFolder,
     updateExamFolder,
-  } = useExamListing();
+    availableSubjects,
+    addSubject,
+    removeSubject,
+  } = useExam();
 
   const [draggedExamId, setDraggedExamId] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const selectedFolder = folders.find((f) => f.id === selectedFolderId) ?? null;
-  const { availableSubjects, addSubject, removeSubject } = useSubjects();
 
   const handleDragStart = (examId: string) => setDraggedExamId(examId);
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) =>
