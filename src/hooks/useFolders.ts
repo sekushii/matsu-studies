@@ -1,16 +1,30 @@
+import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
+import { getFolders } from "~/server/actions";
 import type { Folder } from "~/types";
 
 export function useFolders() {
   const [folders, setFolders] = useState<Folder[]>([]);
+  const [hookState, setHookState] = useState<"loading" | "error" | "success">(
+    "loading",
+  );
+  const { isSignedIn } = useAuth();
 
   useEffect(() => {
-    const savedFolders = localStorage.getItem("folders");
-    if (savedFolders) {
-      const parsedFolders = JSON.parse(savedFolders) as Folder[];
-      setFolders(parsedFolders);
-    }
-  }, []);
+    if (!isSignedIn) return;
+
+    const fetchFolders = async () => {
+      const result = await getFolders();
+      if ("error" in result) {
+        setHookState("error");
+      } else {
+        setFolders(result as Folder[]);
+        setHookState("success");
+      }
+    };
+
+    void fetchFolders();
+  }, [isSignedIn]);
 
   const createFolder = () => {
     const newFolder: Folder = {
@@ -54,6 +68,7 @@ export function useFolders() {
   };
 
   return {
+    hookState,
     folders,
     createFolder,
     deleteFolder,
