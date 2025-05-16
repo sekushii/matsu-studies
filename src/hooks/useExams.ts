@@ -33,6 +33,17 @@ export function useExamListing() {
     return matchesSubject && matchesTopics;
   });
 
+  const addExam = (exam: Exam) => {
+    const updatedExams = [...exams, exam];
+    setExams(updatedExams);
+    localStorage.setItem("exams", JSON.stringify(updatedExams));
+
+    // Update available topics
+    const topics = new Set(availableTopics);
+    exam.topics?.forEach((topic) => topics.add(topic));
+    setAvailableTopics(Array.from(topics));
+  };
+
   const deleteExam = (examId: string) => {
     // Remove exam from exams array
     const updatedExams = exams.filter((exam) => exam.id !== examId);
@@ -67,6 +78,7 @@ export function useExamListing() {
     setSelectedSubject,
     selectedTopics,
     setSelectedTopics,
+    addExam,
     deleteExam,
     removeExamFromFolder,
     updateExamFolder,

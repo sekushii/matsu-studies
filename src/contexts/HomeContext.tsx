@@ -23,6 +23,7 @@ interface HomeContextType {
   setSelectedSubject: (subject: string | null) => void;
   selectedTopics: string[];
   setSelectedTopics: (topics: string[]) => void;
+  addExam: (exam: Exam) => void;
   deleteExam: (id: string) => void;
   removeExamFromFolder: (examId: string) => void;
   updateExamFolder: (examId: string, folderId: string) => void;
@@ -52,6 +53,7 @@ export function HomeContextProvider({ children }: { children: ReactNode }) {
     setSelectedSubject: setSelectedSubjectState,
     selectedTopics,
     setSelectedTopics,
+    addExam,
     deleteExam,
     removeExamFromFolder,
     updateExamFolder,
@@ -80,6 +82,7 @@ export function HomeContextProvider({ children }: { children: ReactNode }) {
     setSelectedSubject,
     selectedTopics,
     setSelectedTopics,
+    addExam,
     deleteExam,
     removeExamFromFolder,
     updateExamFolder,

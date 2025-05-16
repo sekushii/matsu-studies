@@ -65,7 +65,7 @@ export function ImageUpload({
   return (
     <div className={`space-y-2 ${className}`}>
       <div
-        className={`relative overflow-hidden rounded-md border ${aspectRatioClass} ${previewClassName}`}
+        className={`relative overflow-hidden rounded-xl border ${aspectRatioClass} ${previewClassName}`}
       >
         {value ? (
           <>
@@ -93,12 +93,15 @@ export function ImageUpload({
         ) : (
           <Label
             htmlFor={id}
-            className="flex h-full w-full cursor-pointer items-center justify-center"
+            className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-2"
           >
-            <Upload
-              className="h-8 w-8 text-muted-foreground"
-              onClick={(e) => e.stopPropagation()}
-            />
+            <div className="flex items-center gap-1 pl-2">
+              <Upload className="h-4 w-4 text-muted-foreground" />
+              <span className="text-[8px]">{uploadButtonText}</span>
+            </div>
+            <span className="text-[8px] text-muted-foreground">
+              Max size: {maxSize}MB
+            </span>
             <input
               id={id}
               type="file"
@@ -110,19 +113,6 @@ export function ImageUpload({
           </Label>
         )}
       </div>
-      {!value && (
-        <div className="flex items-center gap-2">
-          <Label
-            htmlFor={id}
-            className="flex cursor-pointer items-center gap-2 rounded-md border border-dashed p-2 hover:bg-muted"
-          >
-            <Upload className="h-4 w-4" />
-            <span>
-              {uploadButtonText} (max {maxSize}MB)
-            </span>
-          </Label>
-        </div>
-      )}
       {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );

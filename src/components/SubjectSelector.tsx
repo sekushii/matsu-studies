@@ -27,89 +27,94 @@ export function SubjectSelector({
   };
 
   return (
-    <div className="grid gap-2">
-      <Label htmlFor="subject">Subject</Label>
-      <div className="flex flex-col gap-2">
-        {selectedSubject && (
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 rounded-full bg-secondary px-3 py-1">
-              <span>{selectedSubject}</span>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0"
-                onClick={() => onSubjectSelect("")}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
+    <div className="grid gap-1.5">
+      <Label htmlFor="subject" className="text-sm">
+        Subject
+      </Label>
+      <div className="flex items-center gap-2">
+        {selectedSubject ? (
+          <div className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-sm">
+            <span>{selectedSubject}</span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-3 w-3 p-0 hover:bg-transparent"
+              onClick={() => onSubjectSelect("")}
+            >
+              <X className="h-2.5 w-2.5" />
+            </Button>
           </div>
-        )}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <div className="relative">
+        ) : (
+          <div className="relative flex-1">
             <Button
               type="button"
               variant="outline"
-              className="w-full justify-between"
+              size="sm"
+              className="h-7 w-full justify-between text-sm"
               onClick={() => setIsOpen(!isOpen)}
             >
               Select a subject
-              <ChevronDown className="h-4 w-4" />
+              <ChevronDown className="h-3 w-3" />
             </Button>
             {isOpen && (
               <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-md">
-                {/* Check if there are no subjects */}
                 {availableSubjects.length === 0 ? (
-                  <div className="px-2 py-1.5 text-center text-sm text-gray-500">
+                  <div className="px-2 py-1 text-center text-xs text-muted-foreground">
                     No subjects available
                   </div>
                 ) : (
-                  availableSubjects.map((subj) => (
-                    <div
-                      key={subj}
-                      className="flex items-center justify-between px-2 py-1.5 hover:bg-accent"
-                    >
-                      <button
-                        type="button"
-                        className="flex-1 text-left"
-                        onClick={() => {
-                          onSubjectSelect(subj);
-                          setIsOpen(false);
-                        }}
+                  <div className="max-h-[200px] overflow-y-auto">
+                    {availableSubjects.map((subj) => (
+                      <div
+                        key={subj}
+                        className="flex items-center justify-between px-2 py-1 text-sm hover:bg-accent"
                       >
-                        {subj}
-                      </button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-4 w-4 p-0 hover:bg-destructive hover:text-destructive-foreground"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onSubjectRemove(subj);
-                          onSubjectSelect("");
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))
+                        <button
+                          type="button"
+                          className="flex-1 text-left"
+                          onClick={() => {
+                            onSubjectSelect(subj);
+                            setIsOpen(false);
+                          }}
+                        >
+                          {subj}
+                        </button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-3 w-3 p-0 hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSubjectRemove(subj);
+                            onSubjectSelect("");
+                          }}
+                        >
+                          <X className="h-2.5 w-2.5" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             )}
           </div>
-          <div className="flex gap-2">
+        )}
+        {!selectedSubject && (
+          <div className="flex flex-1 gap-1">
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Or type a new subject and press add"
-              className="w-full"
+              placeholder="Type new subject"
+              className="h-7 text-sm"
             />
             <Button
               type="button"
               variant="outline"
+              size="sm"
+              className="h-7 px-2 text-sm"
               onClick={() => {
                 if (
                   input &&
@@ -125,14 +130,13 @@ export function SubjectSelector({
               Add
             </Button>
           </div>
-          {/* Display a message when the subject limit is reached */}
-          {availableSubjects.length >= subjectLimit && (
-            <p className="text-center text-xs text-red-500">
-              You have reached the maximum number of subjects.
-            </p>
-          )}
-        </div>
+        )}
       </div>
+      {availableSubjects.length >= subjectLimit && (
+        <p className="text-center text-xs text-destructive">
+          Maximum of {subjectLimit} subjects reached
+        </p>
+      )}
     </div>
   );
 }
