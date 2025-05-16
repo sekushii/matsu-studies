@@ -163,14 +163,14 @@ export default function QuestionsPage() {
     localStorage.setItem("exams", JSON.stringify(exams));
 
     alert("Exam created successfully!");
-    router.push("/");
+    router.push("/main");
   };
 
   return (
     <div className="container mx-auto p-4">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold">All Questions</h1>
-        <Link href="/">
+        <Link href="/main">
           <Button variant="outline">Back to Home</Button>
         </Link>
       </div>

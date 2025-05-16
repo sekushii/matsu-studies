@@ -10,6 +10,7 @@ import {
   SignedOut,
   UserButton,
 } from "@clerk/nextjs";
+import { Button } from "~/components/ui/button";
 import Initializer from "~/components/Initializer";
 
 export const metadata: Metadata = {
@@ -30,14 +31,25 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" className={`${geist.variable}`}>
         <body>
-          <header className="flex h-16 items-center justify-end gap-4 p-4">
-            <SignedOut>
-              <SignInButton />
-              <SignUpButton />
-            </SignedOut>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
+          <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+            <div className="flex h-16 w-full items-center">
+              <div className="flex items-center gap-2 pl-10">
+                <span className="text-xl font-bold">Study</span>
+              </div>
+              <div className="ml-auto flex items-center gap-4 pr-10">
+                <SignedOut>
+                  <SignInButton mode="modal">
+                    <Button variant="ghost">Sign in</Button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <Button>Sign up</Button>
+                  </SignUpButton>
+                </SignedOut>
+                <SignedIn>
+                  <UserButton />
+                </SignedIn>
+              </div>
+            </div>
           </header>
           <Initializer>{children}</Initializer>
         </body>

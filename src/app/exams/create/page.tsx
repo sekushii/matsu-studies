@@ -18,7 +18,7 @@ export default function CreateExamPage() {
       <ExamForm
         submitLabel="Create Exam"
         onSubmit={handleCreate}
-        cancelLink="/"
+        cancelLink="/main"
       />
     </div>
   );

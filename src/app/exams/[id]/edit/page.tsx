@@ -30,7 +30,7 @@ export default function EditExamPage() {
         initialExam={initial}
         submitLabel="Save Changes"
         onSubmit={handleUpdate}
-        cancelLink="/"
+        cancelLink="/main"
       />
     </div>
   );
