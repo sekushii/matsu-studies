@@ -1,6 +1,6 @@
 import { Button } from "~/components/ui/button";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Input } from "~/components/ui/input";
 
 interface CreateFolderDialogProps {
@@ -14,13 +14,16 @@ export function CreateFolderDialog({
 }: CreateFolderDialogProps) {
   const [name, setName] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (name.trim()) {
-      onCreate(name.trim());
-      onClose();
-    }
-  };
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      if (name.trim()) {
+        onCreate(name.trim());
+        onClose();
+      }
+    },
+    [name, onCreate, onClose],
+  );
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
