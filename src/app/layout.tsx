@@ -11,6 +11,7 @@ import {
   UserButton,
 } from "@clerk/nextjs";
 import { Button } from "~/components/ui/button";
+import Initializer from "~/components/Initializer";
 
 export const metadata: Metadata = {
   title: "Matsu Studies",
@@ -50,7 +51,7 @@ export default function RootLayout({
               </div>
             </div>
           </header>
-          {children}
+          <Initializer>{children}</Initializer>
         </body>
       </html>
     </ClerkProvider>
