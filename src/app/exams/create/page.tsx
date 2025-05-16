@@ -2,24 +2,42 @@
 
 import { ExamForm } from "~/components/ExamForm";
 import type { Exam } from "~/types";
+import { useRouter } from "next/navigation";
+import { useExam, HomeContextProvider } from "~/contexts/HomeContext";
 
-export default function CreateExamPage() {
+function CreateExamPageContent() {
+  const router = useRouter();
+  const { addExam } = useExam();
+
   const handleCreate = (exam: Exam) => {
-    // persist exam to localStorage or API
-    const saved = JSON.parse(localStorage.getItem("exams") ?? "[]") as Exam[];
-    saved.push(exam);
-    localStorage.setItem("exams", JSON.stringify(saved));
-    alert("Created!");
+    try {
+      // Add exam to the context
+      addExam(exam);
+
+      // Navigate to the exam edit page
+      router.push(`/exams/${exam.id}/edit`);
+    } catch (err) {
+      console.error("Error creating exam:", err);
+    }
   };
 
   return (
-    <div className="create-exam-container flex min-h-screen flex-col items-center justify-center">
-      <h1 className="pb-6 pt-6 text-3xl font-bold">Create New Exam</h1>
-      <ExamForm
-        submitLabel="Create Exam"
-        onSubmit={handleCreate}
-        cancelLink="/main"
-      />
+    <div className="flex h-[calc(100vh-4rem)] w-full flex-col">
+      <div className="flex-1 overflow-hidden">
+        <ExamForm
+          submitLabel="Create Exam"
+          onSubmit={handleCreate}
+          cancelLink="/main"
+        />
+      </div>
     </div>
+  );
+}
+
+export default function CreateExamPage() {
+  return (
+    <HomeContextProvider>
+      <CreateExamPageContent />
+    </HomeContextProvider>
   );
 }
