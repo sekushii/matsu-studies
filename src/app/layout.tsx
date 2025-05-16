@@ -10,6 +10,7 @@ import {
   SignedOut,
   UserButton,
 } from "@clerk/nextjs";
+import Initializer from "~/components/Initializer";
 
 export const metadata: Metadata = {
   title: "Matsu Studies",
@@ -38,7 +39,7 @@ export default function RootLayout({
               <UserButton />
             </SignedIn>
           </header>
-          {children}
+          <Initializer>{children}</Initializer>
         </body>
       </html>
     </ClerkProvider>
