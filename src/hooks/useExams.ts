@@ -1,28 +1,44 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useAuth } from "@clerk/nextjs";
 import type { Exam } from "~/types";
+import {
+  serverGetExams,
+  serverDeleteExam,
+  serverUpdateExamFolder,
+} from "~/server/actions";
 
 export function useExamListing() {
   const [exams, setExams] = useState<Exam[]>([]);
   const [availableTopics, setAvailableTopics] = useState<string[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>("all");
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
+  const [hookState, setHookState] = useState<"loading" | "error" | "success">(
+    "loading",
+  );
+  const { isSignedIn } = useAuth();
 
   useEffect(() => {
-    // Load exams from localStorage
-    const savedExams = localStorage.getItem("exams");
+    if (!isSignedIn) return;
 
-    if (savedExams) {
-      const parsedExams = JSON.parse(savedExams) as Exam[];
-      setExams(parsedExams);
+    const fetchExams = async () => {
+      const result = await serverGetExams();
+      if ("error" in result) {
+        setHookState("error");
+      } else {
+        setExams(result);
 
-      // Extract unique topics from all exams
-      const topics = new Set<string>();
-      parsedExams.forEach((exam) => {
-        exam.topics?.forEach((topic) => topics.add(topic));
-      });
-      setAvailableTopics(Array.from(topics));
-    }
-  }, []);
+        // Extract unique topics from all exams
+        const topics = new Set<string>();
+        result.forEach((exam) => {
+          exam.topics?.forEach((topic) => topics.add(topic));
+        });
+        setAvailableTopics(Array.from(topics));
+        setHookState("success");
+      }
+    };
+
+    void fetchExams();
+  }, [isSignedIn]);
 
   const filteredExams = useMemo(() => {
     return exams.filter((exam) => {
@@ -36,36 +52,42 @@ export function useExamListing() {
   }, [exams, selectedSubject, selectedTopics]);
 
   const deleteExam = useCallback(
-    (examId: string) => {
-      // Remove exam from exams array
-      const updatedExams = exams.filter((exam) => exam.id !== examId);
-      setExams(updatedExams);
-      localStorage.setItem("exams", JSON.stringify(updatedExams));
-
-      // Remove exam answers from localStorage
-      localStorage.removeItem(`exam-answers-${examId}`);
+    async (examId: string) => {
+      const result = await serverDeleteExam(examId);
+      if (!("error" in result)) {
+        setExams(exams.filter((exam) => exam.id !== examId));
+      }
+      return result;
     },
     [exams],
   );
 
   const removeExamFromFolder = useCallback(
-    (examId: string) => {
-      const updatedExams = exams.map((exam) =>
-        exam.id === examId ? { ...exam, folderId: undefined } : exam,
-      );
-      setExams(updatedExams);
-      localStorage.setItem("exams", JSON.stringify(updatedExams));
+    async (examId: string) => {
+      const result = await serverUpdateExamFolder(examId, undefined);
+      if (!("error" in result)) {
+        setExams(
+          exams.map((exam) =>
+            exam.id === examId ? { ...exam, folderId: undefined } : exam,
+          ),
+        );
+      }
+      return result;
     },
     [exams],
   );
 
   const updateExamFolder = useCallback(
-    (examId: string, folderId: string | undefined) => {
-      const updatedExams = exams.map((exam) =>
-        exam.id === examId ? { ...exam, folderId } : exam,
-      );
-      setExams(updatedExams);
-      localStorage.setItem("exams", JSON.stringify(updatedExams));
+    async (examId: string, folderId: string) => {
+      const result = await serverUpdateExamFolder(examId, folderId);
+      if (!("error" in result)) {
+        setExams(
+          exams.map((exam) =>
+            exam.id === examId ? { ...exam, folderId } : exam,
+          ),
+        );
+      }
+      return result;
     },
     [exams],
   );
@@ -81,5 +103,6 @@ export function useExamListing() {
     deleteExam,
     removeExamFromFolder,
     updateExamFolder,
+    hookState,
   };
 }

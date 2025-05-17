@@ -32,7 +32,7 @@ export const QUERIES = {
       .select({
         id: sql<string>`${folders.id}::text`,
         name: folders.name,
-        icon: folders.iconUrl,
+        iconUrl: folders.iconUrl,
         exams: sql<string[]>`array_agg(${exams.id}::text)::text[]`,
       })
       .from(folders)
@@ -45,10 +45,12 @@ export const QUERIES = {
   dbGetExamsByUserId: function (userId: number) {
     return db
       .select({
-        id: exams.id,
+        id: sql<string>`${exams.id}::text`,
         title: exams.title,
+        description: exams.description,
         timeLimit: exams.timeLimit,
         iconUrl: exams.iconUrl,
+        folderId: sql<string>`${exams.folderId}::text`,
         questionCount: sql<number>`count(${examQuestions.questionId})::int`,
       })
       .from(exams)
@@ -77,7 +79,7 @@ export const MUTATIONS = {
       })
       .onConflictDoNothing();
 
-    return String(result[0]?.id ?? "");
+    return result[0];
   },
 
   dbInsertFolder: async function ({
@@ -98,20 +100,54 @@ export const MUTATIONS = {
         iconUrl: folders.iconUrl,
       });
 
-    return {
-      id: String(result[0]?.id),
-      name: result[0]?.name ?? "",
-      icon: result[0]?.iconUrl ?? undefined,
-      exams: [],
-    };
+    return result[0];
   },
 
-  dbUpdateExamFolder: function (examId: number, folderId: number) {
-    return db
+  dbInsertExam: async function ({
+    userId,
+    folderId,
+    title,
+    description,
+    timeLimit,
+    iconUrl,
+  }: {
+    userId: number;
+    folderId?: number;
+    title: string;
+    description?: string;
+    timeLimit?: number;
+    iconUrl?: string;
+  }) {
+    const result = await db
+      .insert(exams)
+      .values({ userId, folderId, title, description, timeLimit, iconUrl })
+      .returning({
+        id: exams.id,
+        title: exams.title,
+        description: exams.description,
+        timeLimit: exams.timeLimit,
+        iconUrl: exams.iconUrl,
+        folderId: exams.folderId,
+      });
+
+    return result[0];
+  },
+
+  dbDeleteExamById: function (examId: number) {
+    return db.delete(exams).where(eq(exams.id, examId));
+  },
+
+  dbUpdateExamFolder: async function (examId: number, folderId: number | null) {
+    const result = await db
       .update(exams)
       .set({ folderId })
       .where(eq(exams.id, examId))
-      .returning();
+      .returning({
+        id: exams.id,
+        folderId: exams.folderId,
+      });
+
+    return result[0];
   },
 
   dbDeleteFolderById: function (folderId: number) {
@@ -129,11 +165,7 @@ export const MUTATIONS = {
         iconUrl: folders.iconUrl,
       });
 
-    return {
-      id: String(result[0]?.id),
-      name: result[0]?.name ?? "",
-      icon: result[0]?.iconUrl ?? undefined,
-    };
+    return result[0];
   },
 
   dbUpdateFolderName: async function (folderId: number, name: string) {
@@ -147,10 +179,6 @@ export const MUTATIONS = {
         iconUrl: folders.iconUrl,
       });
 
-    return {
-      id: String(result[0]?.id),
-      name: result[0]?.name ?? "",
-      icon: result[0]?.iconUrl ?? undefined,
-    };
+    return result[0];
   },
 };
