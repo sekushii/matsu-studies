@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import type { Exam } from "~/types";
 
 export function useExamListing() {
@@ -24,40 +24,51 @@ export function useExamListing() {
     }
   }, []);
 
-  const filteredExams = exams.filter((exam) => {
-    const matchesSubject =
-      selectedSubject === "all" || exam.subject === selectedSubject;
-    const matchesTopics =
-      selectedTopics.length === 0 ||
-      selectedTopics.every((topic) => exam.topics?.includes(topic));
-    return matchesSubject && matchesTopics;
-  });
+  const filteredExams = useMemo(() => {
+    return exams.filter((exam) => {
+      const matchesSubject =
+        selectedSubject === "all" || exam.subject === selectedSubject;
+      const matchesTopics =
+        selectedTopics.length === 0 ||
+        selectedTopics.every((topic) => exam.topics?.includes(topic));
+      return matchesSubject && matchesTopics;
+    });
+  }, [exams, selectedSubject, selectedTopics]);
 
-  const deleteExam = (examId: string) => {
-    // Remove exam from exams array
-    const updatedExams = exams.filter((exam) => exam.id !== examId);
-    setExams(updatedExams);
-    localStorage.setItem("exams", JSON.stringify(updatedExams));
+  const deleteExam = useCallback(
+    (examId: string) => {
+      // Remove exam from exams array
+      const updatedExams = exams.filter((exam) => exam.id !== examId);
+      setExams(updatedExams);
+      localStorage.setItem("exams", JSON.stringify(updatedExams));
 
-    // Remove exam answers from localStorage
-    localStorage.removeItem(`exam-answers-${examId}`);
-  };
+      // Remove exam answers from localStorage
+      localStorage.removeItem(`exam-answers-${examId}`);
+    },
+    [exams],
+  );
 
-  const removeExamFromFolder = (examId: string) => {
-    const updatedExams = exams.map((exam) =>
-      exam.id === examId ? { ...exam, folderId: undefined } : exam,
-    );
-    setExams(updatedExams);
-    localStorage.setItem("exams", JSON.stringify(updatedExams));
-  };
+  const removeExamFromFolder = useCallback(
+    (examId: string) => {
+      const updatedExams = exams.map((exam) =>
+        exam.id === examId ? { ...exam, folderId: undefined } : exam,
+      );
+      setExams(updatedExams);
+      localStorage.setItem("exams", JSON.stringify(updatedExams));
+    },
+    [exams],
+  );
 
-  const updateExamFolder = (examId: string, folderId: string | undefined) => {
-    const updatedExams = exams.map((exam) =>
-      exam.id === examId ? { ...exam, folderId } : exam,
-    );
-    setExams(updatedExams);
-    localStorage.setItem("exams", JSON.stringify(updatedExams));
-  };
+  const updateExamFolder = useCallback(
+    (examId: string, folderId: string | undefined) => {
+      const updatedExams = exams.map((exam) =>
+        exam.id === examId ? { ...exam, folderId } : exam,
+      );
+      setExams(updatedExams);
+      localStorage.setItem("exams", JSON.stringify(updatedExams));
+    },
+    [exams],
+  );
 
   return {
     exams,
