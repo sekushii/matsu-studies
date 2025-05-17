@@ -60,7 +60,27 @@ export const QUERIES = {
 };
 
 export const MUTATIONS = {
-  createFolder: function ({
+  createUser: async function ({
+    externalId,
+    name,
+    email,
+  }: {
+    externalId: string;
+    name: string;
+    email: string;
+  }) {
+    const result = await db
+      .insert(users)
+      .values({ externalId, username: name, email })
+      .returning({
+        id: users.id,
+      })
+      .onConflictDoNothing();
+
+    return result[0];
+  },
+
+  createFolder: async function ({
     userId,
     name,
     iconUrl,
@@ -69,11 +89,28 @@ export const MUTATIONS = {
     name: string;
     iconUrl?: string | null;
   }) {
-    return db.insert(folders).values({ userId, name, iconUrl });
+    const result = await db
+      .insert(folders)
+      .values({ userId, name, iconUrl })
+      .returning({
+        id: folders.id,
+        name: folders.name,
+        iconUrl: folders.iconUrl,
+      });
+
+    return {
+      id: String(result[0]?.id),
+      name: result[0]?.name,
+      icon: result[0]?.iconUrl ?? undefined,
+    };
   },
 
   updateExamFolder: function (examId: number, folderId: number) {
-    return db.update(exams).set({ folderId }).where(eq(exams.id, examId));
+    return db
+      .update(exams)
+      .set({ folderId })
+      .where(eq(exams.id, examId))
+      .returning();
   },
 
   deleteFolder: function (folderId: number) {

@@ -1,6 +1,6 @@
 import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
-import { getFolders } from "~/server/actions";
+import { FOLDER_ACTIONS } from "~/server/actions";
 import type { Folder } from "~/types";
 
 export function useFolders() {
@@ -14,7 +14,7 @@ export function useFolders() {
     if (!isSignedIn) return;
 
     const fetchFolders = async () => {
-      const result = await getFolders();
+      const result = await FOLDER_ACTIONS.getFolders();
       if ("error" in result) {
         setHookState("error");
       } else {
@@ -26,15 +26,13 @@ export function useFolders() {
     void fetchFolders();
   }, [isSignedIn]);
 
-  const createFolder = () => {
-    const newFolder: Folder = {
-      id: crypto.randomUUID(),
-      name: `New Folder ${folders.length + 1}`,
-      exams: [],
-    };
-    const updatedFolders = [...folders, newFolder];
-    setFolders(updatedFolders);
-    localStorage.setItem("folders", JSON.stringify(updatedFolders));
+  const createFolder = async (name: string, iconUrl: string) => {
+    const newFolder = await FOLDER_ACTIONS.createFolder(name, iconUrl);
+    if (!("error" in newFolder)) {
+      setFolders([...folders, { ...newFolder, exams: [] } as Folder]);
+    }
+
+    return newFolder;
   };
 
   const deleteFolder = (folderId: string) => {
