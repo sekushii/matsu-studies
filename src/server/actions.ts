@@ -99,7 +99,7 @@ export const serverUpdateFolderIcon = async (
   return {
     id: String(result.data.id),
     name: result.data.name ?? "",
-    icon: result.data.iconUrl ?? undefined,
+    icon: result.data.iconUrl ?? "",
   };
 };
 

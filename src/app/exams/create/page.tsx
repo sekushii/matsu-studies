@@ -2,34 +2,46 @@
 
 import { ExamForm } from "~/components/ExamForm";
 import type { Exam } from "~/types";
-import { serverCreateExam } from "~/server/actions";
+import { useRouter } from "next/navigation";
+import { useExam, HomeContextProvider } from "~/contexts/HomeContext";
 import { useCallback } from "react";
 
-export default function CreateExamPage() {
-  const handleCreate = useCallback(async (exam: Exam) => {
-    const result = await serverCreateExam({
-      title: exam.title,
-      description: exam.description,
-      timeLimit: exam.timeLimit,
-      iconUrl: exam.icon,
-      folderId: exam.folderId,
-    });
+function CreateExamPageContent() {
+  const router = useRouter();
+  const { addExam } = useExam();
 
-    if ("error" in result) {
-      alert("Failed to create exam: " + result.error);
-    } else {
-      alert("Created!");
-    }
-  }, []);
+  const handleCreate = useCallback(
+    async (exam: Exam) => {
+      try {
+        // Add exam to the context
+        void (await addExam(exam));
+
+        // Navigate to the exam edit page
+        router.push(`/exams/${exam.id}/edit`);
+      } catch (err) {
+        console.error("Error creating exam:", err);
+      }
+    },
+    [addExam, router],
+  );
 
   return (
-    <div className="create-exam-container flex min-h-screen flex-col items-center justify-center">
-      <h1 className="pb-6 pt-6 text-3xl font-bold">Create New Exam</h1>
-      <ExamForm
-        submitLabel="Create Exam"
-        onSubmit={handleCreate}
-        cancelLink="/main"
-      />
+    <div className="flex h-[calc(100vh-4rem)] w-full flex-col">
+      <div className="flex-1 overflow-hidden">
+        <ExamForm
+          submitLabel="Create Exam"
+          onSubmit={handleCreate}
+          cancelLink="/main"
+        />
+      </div>
     </div>
+  );
+}
+
+export default function CreateExamPage() {
+  return (
+    <HomeContextProvider>
+      <CreateExamPageContent />
+    </HomeContextProvider>
   );
 }

@@ -13,36 +13,18 @@ interface HomeContextType {
   createFolder: (
     name: string,
     iconUrl: string,
-  ) => Promise<Folder | { error: string }>;
+  ) => Promise<{ id: string } | { error: string }>;
   deleteFolder: (
     id: string,
   ) => Promise<{ error: string } | { success: boolean }>;
   updateFolderIcon: (
     id: string,
-    icon: string,
-  ) => Promise<
-    | {
-        id: string;
-        name: string;
-        icon: string | undefined;
-      }
-    | {
-        error: string;
-      }
-  >;
+    iconUrl: string,
+  ) => Promise<{ error: string } | { success: boolean }>;
   renameFolder: (
     id: string,
     name: string,
-  ) => Promise<
-    | {
-        id: string;
-        name: string;
-        icon: string | undefined;
-      }
-    | {
-        error: string;
-      }
-  >;
+  ) => Promise<{ error: string } | { success: boolean }>;
   updateFolderSubject: (id: string, subject: string) => void;
 
   // Exams
@@ -52,6 +34,7 @@ interface HomeContextType {
   setSelectedSubject: (subject: string | null) => void;
   selectedTopics: string[];
   setSelectedTopics: (topics: string[]) => void;
+  addExam: (exam: Exam) => Promise<void>;
   deleteExam: (id: string) => void;
   removeExamFromFolder: (examId: string) => void;
   updateExamFolder: (examId: string, folderId: string) => void;
@@ -81,6 +64,7 @@ export function HomeContextProvider({ children }: { children: ReactNode }) {
     setSelectedSubject: setSelectedSubjectState,
     selectedTopics,
     setSelectedTopics,
+    addExam,
     deleteExam,
     removeExamFromFolder,
     updateExamFolder,
@@ -109,6 +93,7 @@ export function HomeContextProvider({ children }: { children: ReactNode }) {
     setSelectedSubject,
     selectedTopics,
     setSelectedTopics,
+    addExam,
     deleteExam,
     removeExamFromFolder,
     updateExamFolder,

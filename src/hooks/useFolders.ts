@@ -33,13 +33,17 @@ export function useFolders() {
   }, [isSignedIn]);
 
   const handleCreateFolder = useCallback(
-    async (name: string, iconUrl: string) => {
-      const newFolder = await serverCreateFolder(name, iconUrl);
-      if (!("error" in newFolder)) {
-        setFolders([...folders, { ...newFolder, exams: [] } as Folder]);
+    async (
+      name: string,
+      iconUrl: string,
+    ): Promise<Folder | { error: string }> => {
+      const result = await serverCreateFolder(name, iconUrl);
+      if (!("error" in result)) {
+        const newFolder = { id: result.id, name, iconUrl, exams: [] };
+        setFolders([...folders, newFolder as Folder]);
+        return newFolder;
       }
-
-      return newFolder;
+      return { error: result.error! };
     },
     [folders],
   );

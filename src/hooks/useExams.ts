@@ -5,6 +5,7 @@ import {
   serverGetExams,
   serverDeleteExam,
   serverUpdateExamFolder,
+  serverCreateExam,
 } from "~/server/actions";
 
 export function useExamListing() {
@@ -50,6 +51,22 @@ export function useExamListing() {
       return matchesSubject && matchesTopics;
     });
   }, [exams, selectedSubject, selectedTopics]);
+
+  const addExam = useCallback(
+    async (exam: Exam) => {
+      const result = await serverCreateExam(exam);
+      if (!("error" in result)) {
+        const updatedExams = [...exams, { ...exam, id: result.id }];
+        setExams(updatedExams);
+      }
+
+      // Update available topics
+      const topics = new Set(availableTopics);
+      exam.topics?.forEach((topic) => topics.add(topic));
+      setAvailableTopics(Array.from(topics));
+    },
+    [exams, availableTopics],
+  );
 
   const deleteExam = useCallback(
     async (examId: string) => {
@@ -100,6 +117,7 @@ export function useExamListing() {
     setSelectedSubject,
     selectedTopics,
     setSelectedTopics,
+    addExam,
     deleteExam,
     removeExamFromFolder,
     updateExamFolder,
