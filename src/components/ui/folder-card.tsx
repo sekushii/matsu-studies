@@ -1,14 +1,17 @@
 import { Button } from "~/components/ui/button";
 import { Trash2 } from "lucide-react";
 import { ImageUpload } from "~/components/ImageUpload";
-import type { Folder, Exam } from "~/types";
+import type { Folder } from "~/types";
 
 interface FolderCardProps {
   folder: Folder;
   examCount: number;
   onSelect: (folder: Folder) => void;
   onDelete: (folderId: string) => void;
-  onIconUpdate: (folderId: string, icon: string | null) => void;
+  onIconUpdate: (
+    folderId: string,
+    iconUrl: string,
+  ) => Promise<{ success: boolean } | { error: string }>;
   onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop: (folderId: string) => void;
   className?: string;
@@ -62,19 +65,19 @@ export function FolderCard({
       <div
         className="relative aspect-square w-full overflow-hidden rounded-md bg-cover bg-center"
         style={{
-          backgroundImage: folder.icon ? `url(${folder.icon})` : "none",
+          backgroundImage: folder.iconUrl ? `url(${folder.iconUrl})` : "none",
         }}
         onClick={(e: React.MouseEvent<HTMLDivElement>) => {
-          if (!folder.icon) {
+          if (!folder.iconUrl) {
             e.stopPropagation();
           }
         }}
       >
-        {!folder.icon ? (
+        {!folder.iconUrl ? (
           <ImageUpload
             id={`folder-icon-${folder.id}`}
-            value={folder.icon ?? null}
-            onChange={(icon: string | null) => onIconUpdate(folder.id, icon)}
+            value={folder.iconUrl ?? null}
+            onChange={(iconUrl: string) => onIconUpdate(folder.id, iconUrl)}
             uploadButtonText="Upload Icon"
             className="absolute inset-0 h-full w-full cursor-pointer"
           />
@@ -86,7 +89,7 @@ export function FolderCard({
               className="h-5 w-5 rounded-full bg-white p-1 shadow"
               onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                 e.stopPropagation();
-                onIconUpdate(folder.id, null);
+                void onIconUpdate(folder.id, "");
               }}
             >
               <Trash2 className="h-3 w-3 text-red-600" />

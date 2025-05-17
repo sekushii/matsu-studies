@@ -10,10 +10,21 @@ import type { Exam, Folder } from "~/types";
 interface HomeContextType {
   // Folders
   folders: Folder[];
-  createFolder: () => void;
-  deleteFolder: (id: string) => void;
-  updateFolderIcon: (id: string, icon: string | null) => void;
-  renameFolder: (id: string, name: string) => void;
+  createFolder: (
+    name: string,
+    iconUrl: string,
+  ) => Promise<{ id: string } | { error: string }>;
+  deleteFolder: (
+    id: string,
+  ) => Promise<{ error: string } | { success: boolean }>;
+  updateFolderIcon: (
+    id: string,
+    iconUrl: string,
+  ) => Promise<{ error: string } | { success: boolean }>;
+  renameFolder: (
+    id: string,
+    name: string,
+  ) => Promise<{ error: string } | { success: boolean }>;
   updateFolderSubject: (id: string, subject: string) => void;
 
   // Exams
@@ -23,7 +34,7 @@ interface HomeContextType {
   setSelectedSubject: (subject: string | null) => void;
   selectedTopics: string[];
   setSelectedTopics: (topics: string[]) => void;
-  addExam: (exam: Exam) => void;
+  addExam: (exam: Exam) => Promise<void>;
   deleteExam: (id: string) => void;
   removeExamFromFolder: (examId: string) => void;
   updateExamFolder: (examId: string, folderId: string) => void;

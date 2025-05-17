@@ -8,6 +8,7 @@ import {
   ChevronRight,
   Loader2,
 } from "lucide-react";
+import Image from "next/image";
 import type { Question } from "~/types";
 
 interface QuestionListProps {
@@ -195,7 +196,7 @@ function QuestionCard({
             </div>
             {question.image && (
               <div className="flex-shrink-0">
-                <img
+                <Image
                   src={question.image}
                   alt="Question"
                   className="h-12 w-12 rounded-md object-cover"
@@ -218,7 +219,7 @@ function QuestionCard({
                       className="flex items-center gap-1 rounded-md bg-muted/50 p-1"
                     >
                       {opt.image && (
-                        <img
+                        <Image
                           src={opt.image}
                           alt={`Option ${idx + 1}`}
                           className="h-6 w-6 rounded-sm object-cover"

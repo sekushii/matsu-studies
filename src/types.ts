@@ -38,7 +38,7 @@ export interface Exam {
 export interface Folder {
   id: string;
   name: string;
-  icon?: string; // Base64 image data
+  iconUrl?: string; // Base64 image data
   exams: string[]; // Array of exam IDs
   subject?: string;
 }

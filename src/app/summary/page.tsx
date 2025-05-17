@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -37,6 +37,12 @@ import type {
   SortOrder,
 } from "~/types";
 
+const formatTime = (seconds: number) => {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.round(seconds % 60);
+  return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
+};
+
 export default function SummaryPage() {
   const [summaries, setSummaries] = useState<ExamSummary[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -55,87 +61,89 @@ export default function SummaryPage() {
     }
   }, []);
 
-  const handleSort = (field: SortField) => {
-    if (field === sortField) {
-      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortOrder("asc");
-    }
-  };
-
-  const handleShowDetails = (examId: string) => {
-    const savedHistory = localStorage.getItem(`exam-history-${examId}`);
-    const savedExams = localStorage.getItem("exams");
-
-    if (savedHistory) {
-      const parsedHistory = JSON.parse(savedHistory) as ExamHistory;
-      setExamHistory(parsedHistory);
-      setSelectedExamId(examId);
-    }
-
-    if (savedExams) {
-      const exams = JSON.parse(savedExams) as Exam[];
-      const exam = exams.find((e) => e.id === examId);
-      if (exam) {
-        setSelectedExam(exam);
-        setIsDetailsOpen(true);
+  const handleSort = useCallback(
+    (field: SortField) => {
+      if (field === sortField) {
+        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+      } else {
+        setSortField(field);
+        setSortOrder("asc");
       }
-    }
-  };
+    },
+    [sortField, sortOrder],
+  );
 
-  const calculateTopicPerformance = () => {
-    if (!examHistory || !selectedExam) return {};
+  const handleShowDetails = useCallback(
+    (examId: string) => {
+      const savedHistory = localStorage.getItem(`exam-history-${examId}`);
+      const savedExams = localStorage.getItem("exams");
 
-    const topicStats: Record<string, { correct: number; total: number }> = {};
+      if (savedHistory) {
+        const parsedHistory = JSON.parse(savedHistory) as ExamHistory;
+        setExamHistory(parsedHistory);
+        setSelectedExamId(examId);
+      }
 
-    examHistory.attempts[
-      examHistory.attempts.length - 1
-    ]?.questionStats.forEach((stat) => {
-      const question = selectedExam.questions.find(
-        (q) => q.id === stat.questionId,
-      );
-      if (!question?.topics) return;
+      if (savedExams) {
+        const exams = JSON.parse(savedExams) as Exam[];
+        const exam = exams.find((e) => e.id === examId);
+        if (exam) {
+          setSelectedExam(exam);
+          setIsDetailsOpen(true);
+        }
+      }
+    },
+    [setIsDetailsOpen],
+  );
 
-      question.topics.forEach((topic) => {
-        topicStats[topic] ??= { correct: 0, total: 0 };
-        topicStats[topic].total += 1;
-        if (stat.isCorrect) {
-          topicStats[topic].correct += 1;
+  // const calculateTopicPerformance = () => {
+  //   if (!examHistory || !selectedExam) return {};
+
+  //   const topicStats: Record<string, { correct: number; total: number }> = {};
+
+  //   examHistory.attempts[
+  //     examHistory.attempts.length - 1
+  //   ]?.questionStats.forEach((stat) => {
+  //     const question = selectedExam.questions.find(
+  //       (q) => q.id === stat.questionId,
+  //     );
+  //     if (!question?.topics) return;
+
+  //     question.topics.forEach((topic) => {
+  //       topicStats[topic] ??= { correct: 0, total: 0 };
+  //       topicStats[topic].total += 1;
+  //       if (stat.isCorrect) {
+  //         topicStats[topic].correct += 1;
+  //       }
+  //     });
+  //   });
+
+  //   return topicStats;
+  // };
+
+  const filteredAndSortedSummaries = useMemo(() => {
+    return summaries
+      .filter((summary) =>
+        summary.examTitle.toLowerCase().includes(searchTerm.toLowerCase()),
+      )
+      .sort((a, b) => {
+        const order = sortOrder === "asc" ? 1 : -1;
+        switch (sortField) {
+          case "date":
+            return (
+              (new Date(a.date).getTime() - new Date(b.date).getTime()) * order
+            );
+          case "examTitle":
+            return a.examTitle.localeCompare(b.examTitle) * order;
+          case "score":
+            return (a.score - b.score) * order;
+          case "timeSpent":
+            return (a.timeSpent - b.timeSpent) * order;
+          default:
+            return 0;
         }
       });
-    });
-
-    return topicStats;
-  };
-
-  const filteredAndSortedSummaries = summaries
-    .filter((summary) =>
-      summary.examTitle.toLowerCase().includes(searchTerm.toLowerCase()),
-    )
-    .sort((a, b) => {
-      const order = sortOrder === "asc" ? 1 : -1;
-      switch (sortField) {
-        case "date":
-          return (
-            (new Date(a.date).getTime() - new Date(b.date).getTime()) * order
-          );
-        case "examTitle":
-          return a.examTitle.localeCompare(b.examTitle) * order;
-        case "score":
-          return (a.score - b.score) * order;
-        case "timeSpent":
-          return (a.timeSpent - b.timeSpent) * order;
-        default:
-          return 0;
-      }
-    });
-
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = Math.round(seconds % 60);
-    return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
-  };
+  }, [summaries, searchTerm, sortField, sortOrder]);
 
   return (
     <div className="container mx-auto max-w-7xl px-4 py-10">

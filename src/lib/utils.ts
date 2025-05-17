@@ -10,3 +10,6 @@ export const formatTime = (seconds: number) => {
   const remainingSeconds = seconds % 60;
   return `${minutes}:${remainingSeconds.toString().padStart(2, "0")}`;
 };
+
+// eslint-disable-next-line @typescript-eslint/no-empty-function
+export const noop = () => {};

@@ -7,7 +7,10 @@ interface FolderGridProps {
   exams: Exam[];
   onFolderSelect: (folder: Folder) => void;
   onFolderDelete: (folderId: string) => void;
-  onFolderIconUpdate: (folderId: string, icon: string | null) => void;
+  onFolderIconUpdate: (
+    folderId: string,
+    iconUrl: string,
+  ) => Promise<{ success: boolean } | { error: string }>;
   onDragOver: (e: React.DragEvent<HTMLDivElement>) => void;
   onDrop: (folderId: string) => void;
   className?: string;

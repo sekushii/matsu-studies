@@ -3,7 +3,7 @@ import { exams, folders, users, examQuestions } from "./schema";
 import { eq, sql } from "drizzle-orm";
 
 export const QUERIES = {
-  getUser: function (externalId: string) {
+  dbGetUserByExternalId: function (externalId: string) {
     return db
       .select({
         id: users.id,
@@ -15,7 +15,7 @@ export const QUERIES = {
       .where(eq(users.externalId, externalId));
   },
 
-  getFolders: function (userId: number) {
+  dbGetFoldersByUserId: function (userId: number) {
     return db
       .select({
         id: folders.id,
@@ -27,12 +27,12 @@ export const QUERIES = {
       .orderBy(folders.id);
   },
 
-  getFoldersWithExams: function (userId: number) {
+  dbGetFoldersWithExamsByUserId: function (userId: number) {
     return db
       .select({
         id: sql<string>`${folders.id}::text`,
         name: folders.name,
-        icon: folders.iconUrl,
+        iconUrl: folders.iconUrl,
         exams: sql<string[]>`array_agg(${exams.id}::text)::text[]`,
       })
       .from(folders)
@@ -42,13 +42,15 @@ export const QUERIES = {
       .orderBy(folders.id);
   },
 
-  getExams: function (userId: number) {
+  dbGetExamsByUserId: function (userId: number) {
     return db
       .select({
-        id: exams.id,
+        id: sql<string>`${exams.id}::text`,
         title: exams.title,
+        description: exams.description,
         timeLimit: exams.timeLimit,
         iconUrl: exams.iconUrl,
+        folderId: sql<string>`${exams.folderId}::text`,
         questionCount: sql<number>`count(${examQuestions.questionId})::int`,
       })
       .from(exams)
@@ -60,7 +62,27 @@ export const QUERIES = {
 };
 
 export const MUTATIONS = {
-  createFolder: function ({
+  dbInsertUser: async function ({
+    externalId,
+    name,
+    email,
+  }: {
+    externalId: string;
+    name: string;
+    email: string;
+  }) {
+    const result = await db
+      .insert(users)
+      .values({ externalId, username: name, email })
+      .returning({
+        id: users.id,
+      })
+      .onConflictDoNothing();
+
+    return result[0];
+  },
+
+  dbInsertFolder: async function ({
     userId,
     name,
     iconUrl,
@@ -69,14 +91,94 @@ export const MUTATIONS = {
     name: string;
     iconUrl?: string | null;
   }) {
-    return db.insert(folders).values({ userId, name, iconUrl });
+    const result = await db
+      .insert(folders)
+      .values({ userId, name, iconUrl })
+      .returning({
+        id: folders.id,
+        name: folders.name,
+        iconUrl: folders.iconUrl,
+      });
+
+    return result[0];
   },
 
-  updateExamFolder: function (examId: number, folderId: number) {
-    return db.update(exams).set({ folderId }).where(eq(exams.id, examId));
+  dbInsertExam: async function ({
+    userId,
+    folderId,
+    title,
+    description,
+    timeLimit,
+    iconUrl,
+  }: {
+    userId: number;
+    folderId?: number;
+    title: string;
+    description?: string;
+    timeLimit?: number;
+    iconUrl?: string;
+  }) {
+    const result = await db
+      .insert(exams)
+      .values({ userId, folderId, title, description, timeLimit, iconUrl })
+      .returning({
+        id: exams.id,
+        title: exams.title,
+        description: exams.description,
+        timeLimit: exams.timeLimit,
+        iconUrl: exams.iconUrl,
+        folderId: exams.folderId,
+      });
+
+    return result[0];
   },
 
-  deleteFolder: function (folderId: number) {
+  dbDeleteExamById: function (examId: number) {
+    return db.delete(exams).where(eq(exams.id, examId));
+  },
+
+  dbUpdateExamFolder: async function (examId: number, folderId: number | null) {
+    const result = await db
+      .update(exams)
+      .set({ folderId })
+      .where(eq(exams.id, examId))
+      .returning({
+        id: exams.id,
+        folderId: exams.folderId,
+      });
+
+    return result[0];
+  },
+
+  dbDeleteFolderById: function (folderId: number) {
     return db.delete(folders).where(eq(folders.id, folderId));
+  },
+
+  dbUpdateFolderIcon: async function (folderId: number, iconUrl: string) {
+    const result = await db
+      .update(folders)
+      .set({ iconUrl })
+      .where(eq(folders.id, folderId))
+      .returning({
+        id: folders.id,
+        name: folders.name,
+        iconUrl: folders.iconUrl,
+      });
+
+    return result[0];
+  },
+
+  dbUpdateFolderName: async function (folderId: number, name: string) {
+    const result = await db
+      .update(folders)
+      .set({ name })
+      .where(eq(folders.id, folderId))
+      .returning({
+        id: folders.id,
+        name: folders.name,
+        iconUrl: folders.iconUrl,
+      });
+
+    return result[0];
   },
 };

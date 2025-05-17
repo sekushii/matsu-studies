@@ -10,7 +10,7 @@ import { useSubjects } from "~/hooks/useSubjects";
 import { QuestionCreationForm } from "./QuestionCreationForm";
 import { ExamDetailsForm } from "./ExamDetailsForm";
 import { QuestionList } from "./QuestionList";
-
+import Image from "next/image";
 export interface ExamFormProps {
   initialExam?: Partial<Exam>;
   submitLabel?: string;
@@ -282,7 +282,7 @@ export const ExamForm: React.FC<ExamFormProps> = ({
                     <div className="flex items-start gap-4">
                       {icon && (
                         <div className="h-24 w-24 overflow-hidden rounded-md">
-                          <img
+                          <Image
                             src={icon}
                             alt="Exam icon"
                             className="h-full w-full object-cover"

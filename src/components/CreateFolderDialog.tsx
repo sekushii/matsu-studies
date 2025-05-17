@@ -2,10 +2,19 @@ import { Button } from "~/components/ui/button";
 import { X } from "lucide-react";
 import { useState, useCallback } from "react";
 import { Input } from "~/components/ui/input";
+import type { Folder } from "~/types";
 
 interface CreateFolderDialogProps {
   onClose: () => void;
-  onCreate: (name: string) => void;
+  onCreate: (
+    name: string,
+    icon: string,
+  ) => Promise<
+    | Folder
+    | {
+        error: string;
+      }
+  >;
 }
 
 export function CreateFolderDialog({
@@ -15,10 +24,10 @@ export function CreateFolderDialog({
   const [name, setName] = useState("");
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.FormEvent) => {
       e.preventDefault();
       if (name.trim()) {
-        onCreate(name.trim());
+        await onCreate(name.trim(), "");
         onClose();
       }
     },

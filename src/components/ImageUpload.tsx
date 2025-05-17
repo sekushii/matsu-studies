@@ -7,7 +7,7 @@ import { Upload, Trash2 } from "lucide-react";
 interface ImageUploadProps {
   id: string;
   value?: string | null;
-  onChange: (value: string | null) => void;
+  onChange: (value: string) => void;
   aspectRatio?: "square" | "video";
   maxSize?: number; // in MB
   className?: string;
@@ -56,7 +56,7 @@ export function ImageUpload({
   };
 
   const handleRemove = () => {
-    onChange(null);
+    onChange("");
   };
 
   const aspectRatioClass =

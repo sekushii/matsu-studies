@@ -4,7 +4,7 @@ import { X, Edit2, Check, XCircle } from "lucide-react";
 import type { Folder } from "~/types";
 import { ExamCard } from "./ExamCard";
 import { SubjectSelector } from "./SubjectSelector";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useExam } from "~/contexts/HomeContext";
 
 interface FolderDialogProps {
@@ -39,13 +39,13 @@ export function FolderDialog({
 
   useEffect(() => setNameInput(folder.name), [folder.name]);
 
-  const handleSave = () => {
+  const handleSave = useCallback(async () => {
     const trimmed = nameInput.trim();
     if (trimmed && trimmed !== folder.name) {
-      renameFolder(folder.id, trimmed);
+      await renameFolder(folder.id, trimmed);
     }
     setIsEditing(false);
-  };
+  }, [folder.id, folder.name, nameInput, renameFolder]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
