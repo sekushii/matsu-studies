@@ -44,9 +44,9 @@ export function FoldersList({
                 variant="ghost"
                 size="icon"
                 className="rounded-full bg-white p-0 shadow"
-                onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
                   e.stopPropagation();
-                  deleteFolder(folder.id);
+                  await deleteFolder(folder.id);
                 }}
               >
                 <Trash2 className="h-5 w-5 text-red-600" />
@@ -75,8 +75,8 @@ export function FoldersList({
                 <ImageUpload
                   id={`folder-icon-${folder.id}`}
                   value={folder.icon ?? null}
-                  onChange={(icon: string | null) =>
-                    updateFolderIcon(folder.id, icon)
+                  onChange={async (icon: string | null) =>
+                    await updateFolderIcon(folder.id, icon ?? "")
                   }
                   uploadButtonText="Upload Icon"
                   className="absolute inset-0 h-full w-full cursor-pointer"
@@ -87,9 +87,9 @@ export function FoldersList({
                     variant="ghost"
                     size="icon"
                     className="rounded-full bg-white p-1 shadow"
-                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                    onClick={async (e: React.MouseEvent<HTMLButtonElement>) => {
                       e.stopPropagation();
-                      updateFolderIcon(folder.id, null);
+                      await updateFolderIcon(folder.id, "");
                     }}
                   >
                     <Trash2 className="h-5 w-5 text-red-600" />

@@ -10,10 +10,39 @@ import type { Exam, Folder } from "~/types";
 interface HomeContextType {
   // Folders
   folders: Folder[];
-  createFolder: () => void;
-  deleteFolder: (id: string) => void;
-  updateFolderIcon: (id: string, icon: string | null) => void;
-  renameFolder: (id: string, name: string) => void;
+  createFolder: (
+    name: string,
+    iconUrl: string,
+  ) => Promise<Folder | { error: string }>;
+  deleteFolder: (
+    id: string,
+  ) => Promise<{ error: string } | { success: boolean }>;
+  updateFolderIcon: (
+    id: string,
+    icon: string,
+  ) => Promise<
+    | {
+        id: string;
+        name: string;
+        icon: string | undefined;
+      }
+    | {
+        error: string;
+      }
+  >;
+  renameFolder: (
+    id: string,
+    name: string,
+  ) => Promise<
+    | {
+        id: string;
+        name: string;
+        icon: string | undefined;
+      }
+    | {
+        error: string;
+      }
+  >;
   updateFolderSubject: (id: string, subject: string) => void;
 
   // Exams

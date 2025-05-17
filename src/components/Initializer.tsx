@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import "~/styles/globals.css";
 
 import { useAuth, useUser } from "@clerk/nextjs";
-import { USER_ACTIONS } from "~/server/actions";
+import { serverCreateUser } from "~/server/actions";
 
 export default function Initializer({
   children,
@@ -16,7 +16,7 @@ export default function Initializer({
 
   useEffect(() => {
     if (isLoaded && user && userId && !initialized.current) {
-      void USER_ACTIONS.createUser(
+      void serverCreateUser(
         user.fullName!,
         user.emailAddresses[0]!.emailAddress,
       );

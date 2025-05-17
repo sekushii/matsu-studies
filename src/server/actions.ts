@@ -2,71 +2,108 @@
 
 import { auth } from "@clerk/nextjs/server";
 
-import { users, folders } from "./db/schema";
-import { db } from "./db";
+import { folders } from "./db/schema";
 import { MUTATIONS, QUERIES } from "./db/queries";
 import { createInsertSchema } from "drizzle-zod";
 import { tryCatch } from "~/lib/try-catch";
 
-export const USER_ACTIONS = {
-  isUserAuthenticated: async function () {
-    const { userId } = await auth();
+// ===== User Authentication & Management =====
 
-    return { auth: !!userId, userId: userId! };
-  },
-
-  getUser: async function () {
-    const { auth, userId: userExternalId } = await this.isUserAuthenticated();
-    if (!auth) return { auth: false };
-
-    const user = await QUERIES.getUser(userExternalId);
-
-    return { auth: !!user[0], user: user[0], userExternalId };
-  },
-
-  createUser: async function (name: string, email: string) {
-    const { auth, userId } = await this.isUserAuthenticated();
-
-    if (!auth) return { error: "Unauthorized" };
-
-    await MUTATIONS.createUser({
-      externalId: userId,
-      name: name,
-      email: email,
-    });
-  },
+export const serverCheckAuth = async () => {
+  const { userId } = await auth();
+  return { auth: !!userId, userId: userId! };
 };
 
-export const FOLDER_ACTIONS = {
-  createFolder: async function (name: string, iconUrl: string) {
-    const { auth, user } = await USER_ACTIONS.getUser();
+export const serverGetUser = async () => {
+  const { auth, userId: userExternalId } = await serverCheckAuth();
+  if (!auth) return { auth: false };
 
-    if (!auth) return { error: "Unauthorized" };
+  const user = await QUERIES.dbGetUserByExternalId(userExternalId);
+  return { auth: !!user[0], user: user[0], userExternalId };
+};
 
-    const createFolderSchema = createInsertSchema(folders);
-    const parsedFolder = createFolderSchema.safeParse({
-      userId: user!.id,
-      name: name,
-      iconUrl: iconUrl,
-    });
+export const serverCreateUser = async (name: string, email: string) => {
+  const { auth, userId } = await serverCheckAuth();
+  if (!auth) return { error: "Unauthorized" };
 
-    if (!parsedFolder.success) return { error: "Invalid folder data" };
+  const id = await MUTATIONS.dbInsertUser({
+    externalId: userId,
+    name: name,
+    email: email,
+  });
 
-    const folder = await tryCatch(MUTATIONS.createFolder(parsedFolder.data));
+  return id;
+};
 
-    if (folder.error || !folder.data)
-      return { error: "Failed to create folder" };
+// ===== Folder Management =====
 
-    return folder.data;
-  },
+export const serverCreateFolder = async (name: string, iconUrl: string) => {
+  const { auth, user } = await serverGetUser();
+  if (!auth) return { error: "Unauthorized" };
 
-  getFolders: async function () {
-    const { auth, user } = await this.getUser();
+  const createFolderSchema = createInsertSchema(folders);
+  const parsedFolder = createFolderSchema.safeParse({
+    userId: user!.id,
+    name: name,
+    iconUrl: iconUrl,
+  });
 
-    if (!auth) return { error: "Unauthorized" };
+  if (!parsedFolder.success) return { error: "Invalid folder data" };
 
-    const folders = await QUERIES.getFoldersWithExams(user!.id);
+  const folder = await tryCatch(MUTATIONS.dbInsertFolder(parsedFolder.data));
+  if (folder.error || !folder.data) return { error: "Failed to create folder" };
 
-    return folders;
-  },
+  return folder.data;
+};
+
+export const serverGetFolders = async () => {
+  const { auth, user } = await serverGetUser();
+  if (!auth) return { error: "Unauthorized" };
+
+  const folders = await tryCatch(
+    QUERIES.dbGetFoldersWithExamsByUserId(user!.id),
+  );
+  if (folders.error) return { error: "Failed to get folders" };
+
+  return folders.data;
+};
+
+export const serverDeleteFolder = async (folderId: string) => {
+  const { auth } = await serverGetUser();
+  if (!auth) return { error: "Unauthorized" };
+
+  const result = await tryCatch(MUTATIONS.dbDeleteFolderById(Number(folderId)));
+  if (result.error) return { error: "Failed to delete folder" };
+
+  return { success: true };
+};
+
+export const serverUpdateFolderIcon = async (
+  folderId: string,
+  iconUrl: string,
+) => {
+  const { auth } = await serverGetUser();
+  if (!auth) return { error: "Unauthorized" };
+
+  const result = await tryCatch(
+    MUTATIONS.dbUpdateFolderIcon(Number(folderId), iconUrl),
+  );
+  if (result.error) return { error: "Failed to update folder icon" };
+
+  return result.data;
+};
+
+export const serverUpdateFolderName = async (
+  folderId: string,
+  newName: string,
+) => {
+  const { auth } = await serverGetUser();
+  if (!auth) return { error: "Unauthorized" };
+
+  const result = await tryCatch(
+    MUTATIONS.dbUpdateFolderName(Number(folderId), newName),
+  );
+  if (result.error) return { error: "Failed to rename folder" };
+
+  return result.data;
 };

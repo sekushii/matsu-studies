@@ -60,7 +60,10 @@ function Content() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={createFolder}>
+          <Button
+            variant="outline"
+            onClick={() => createFolder("New Folder", "")}
+          >
             <FolderPlus className="mr-2 h-4 w-4" /> New Folder
           </Button>
           <Link href="/questions">

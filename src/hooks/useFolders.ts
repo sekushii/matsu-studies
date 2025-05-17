@@ -1,6 +1,12 @@
 import { useAuth } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
-import { FOLDER_ACTIONS } from "~/server/actions";
+import {
+  serverGetFolders,
+  serverCreateFolder,
+  serverDeleteFolder,
+  serverUpdateFolderIcon,
+  serverUpdateFolderName,
+} from "~/server/actions";
 import type { Folder } from "~/types";
 
 export function useFolders() {
@@ -14,7 +20,7 @@ export function useFolders() {
     if (!isSignedIn) return;
 
     const fetchFolders = async () => {
-      const result = await FOLDER_ACTIONS.getFolders();
+      const result = await serverGetFolders();
       if ("error" in result) {
         setHookState("error");
       } else {
@@ -26,8 +32,8 @@ export function useFolders() {
     void fetchFolders();
   }, [isSignedIn]);
 
-  const createFolder = async (name: string, iconUrl: string) => {
-    const newFolder = await FOLDER_ACTIONS.createFolder(name, iconUrl);
+  const handleCreateFolder = async (name: string, iconUrl: string) => {
+    const newFolder = await serverCreateFolder(name, iconUrl);
     if (!("error" in newFolder)) {
       setFolders([...folders, { ...newFolder, exams: [] } as Folder]);
     }
@@ -35,29 +41,37 @@ export function useFolders() {
     return newFolder;
   };
 
-  const deleteFolder = (folderId: string) => {
-    const updatedFolders = folders.filter((f) => f.id !== folderId);
-    setFolders(updatedFolders);
-    localStorage.setItem("folders", JSON.stringify(updatedFolders));
+  const handleDeleteFolder = async (folderId: string) => {
+    const result = await serverDeleteFolder(folderId);
+    if (!("error" in result)) {
+      setFolders(folders.filter((f) => f.id !== folderId));
+    }
+    return result;
   };
 
-  const updateFolderIcon = (folderId: string, icon: string | null) => {
-    const updatedFolders = folders.map((folder) =>
-      folder.id === folderId ? ({ ...folder, icon } as Folder) : folder,
-    );
-    setFolders(updatedFolders);
-    localStorage.setItem("folders", JSON.stringify(updatedFolders));
+  const handleUpdateFolderIcon = async (folderId: string, icon: string) => {
+    const result = await serverUpdateFolderIcon(folderId, icon);
+    if (!("error" in result)) {
+      setFolders(
+        folders.map((folder) =>
+          folder.id === folderId ? { ...folder, icon } : folder,
+        ),
+      );
+    }
+    return result;
   };
 
-  const renameFolder = (folderId: string, newName: string) => {
-    const updated = folders.map((f) =>
-      f.id === folderId ? { ...f, name: newName } : f,
-    );
-    setFolders(updated);
-    localStorage.setItem("folders", JSON.stringify(updated));
+  const handleUpdateFolderName = async (folderId: string, newName: string) => {
+    const result = await serverUpdateFolderName(folderId, newName);
+    if (!("error" in result)) {
+      setFolders(
+        folders.map((f) => (f.id === folderId ? { ...f, name: newName } : f)),
+      );
+    }
+    return result;
   };
 
-  const updateFolderSubject = (folderId: string, subject: string) => {
+  const handleUpdateFolderSubject = (folderId: string, subject: string) => {
     setFolders((fs) =>
       fs.map((f) =>
         f.id === folderId ? { ...f, subject: subject || undefined } : f,
@@ -68,10 +82,10 @@ export function useFolders() {
   return {
     hookState,
     folders,
-    createFolder,
-    deleteFolder,
-    updateFolderIcon,
-    renameFolder,
-    updateFolderSubject,
+    createFolder: handleCreateFolder,
+    deleteFolder: handleDeleteFolder,
+    updateFolderIcon: handleUpdateFolderIcon,
+    renameFolder: handleUpdateFolderName,
+    updateFolderSubject: handleUpdateFolderSubject,
   };
 }
